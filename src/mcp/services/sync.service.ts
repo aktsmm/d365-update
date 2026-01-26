@@ -78,11 +78,13 @@ export async function syncFromGitHub(
     const isFirstSync = existingShaMap.size === 0;
 
     // 差分同期: SHA が変わったファイルのみ処理
-    const filesToProcess = files.filter((file) => {
-      if (force || isFirstSync) return true;
-      const existingSha = existingShaMap.get(file.path);
-      return existingSha !== file.sha;
-    }).slice(0, maxFiles);
+    const filesToProcess = files
+      .filter((file) => {
+        if (force || isFirstSync) return true;
+        const existingSha = existingShaMap.get(file.path);
+        return existingSha !== file.sha;
+      })
+      .slice(0, maxFiles);
 
     logger.info("Files to process", {
       total: files.length,

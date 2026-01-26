@@ -150,12 +150,12 @@ export function updateCommitDate(
 /**
  * 全ファイルの SHA マップを取得（差分同期用）
  */
-export function getFileShaMap(
-  db: Database.Database,
-): Map<string, string> {
-  const rows = db.prepare(
-    `SELECT file_path, commit_sha FROM d365_updates WHERE commit_sha IS NOT NULL`,
-  ).all() as Array<{ file_path: string; commit_sha: string }>;
+export function getFileShaMap(db: Database.Database): Map<string, string> {
+  const rows = db
+    .prepare(
+      `SELECT file_path, commit_sha FROM d365_updates WHERE commit_sha IS NOT NULL`,
+    )
+    .all() as Array<{ file_path: string; commit_sha: string }>;
 
   const map = new Map<string, string>();
   for (const row of rows) {
