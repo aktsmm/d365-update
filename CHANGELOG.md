@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2026-01-26
+
+### Changed
+
+- 📋 MCP ツール説明に GitHub Copilot への出力形式指示を追加
+  - サマリテーブル（件数、期間、製品別カウント）
+  - 全件一覧テーブル（リリース日、製品、タイトル翻訳、概要翻訳、日本語/英語Docs URL、GitHubコミットURL）
+  - タイトル・概要のユーザー言語への翻訳を必須化
+  - すべてのURLをリンクとして出力することを明記
+
 ## [0.2.2] - 2026-01-26
 
 ### Fixed

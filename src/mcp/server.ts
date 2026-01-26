@@ -31,7 +31,23 @@ export function createServer(): McpServer {
   // search_d365_updates ツール
   server.tool(
     "search_d365_updates",
-    "Search Dynamics 365 update information from GitHub Docs. Returns lightweight metadata. Supports full-text search, product/version/date filters, and pagination. Use get_d365_update to retrieve full details. IMPORTANT: If user writes in Japanese, set locale='ja-jp' to return Japanese Microsoft Learn URLs. ALWAYS translate the title and summary to the user's language when presenting results (e.g., translate to Japanese if user asks in Japanese).",
+    `Search Dynamics 365 update information from GitHub Docs. Returns lightweight metadata. Supports full-text search, product/version/date filters, and pagination. Use get_d365_update to retrieve full details. IMPORTANT: If user writes in Japanese, set locale='ja-jp' to return Japanese Microsoft Learn URLs. ALWAYS translate the title and summary to the user's language when presenting results (e.g., translate to Japanese if user asks in Japanese).
+
+## Output Format Instructions for GitHub Copilot
+
+When presenting results to the user, ALWAYS format as follows:
+
+1. **Summary Table**: Show count, date range, and counts by product
+2. **Full Results Table** with ALL of the following columns:
+   - Release Date (リリース日)
+   - Product (製品)
+   - Title - TRANSLATED to user's language (タイトル - 翻訳)
+   - Summary - TRANSLATED to user's language (概要 - 翻訳)
+   - Japanese Docs URL (docsUrl_ja) - as clickable link [日本語](url)
+   - English Docs URL (docsUrl_en) - as clickable link [英語](url)
+   - GitHub Commits URL (githubCommitsUrl) - as clickable link [Commits](url)
+
+CRITICAL: Always translate title and summary to the user's language. Never omit URLs.`,
     searchD365UpdatesSchema.shape,
     async (input) => {
       try {
