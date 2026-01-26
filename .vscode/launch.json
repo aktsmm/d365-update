@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "preLaunchTask": "npm: build"
+    },
+    {
+      "name": "Debug MCP Server",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/dist/mcp/index.js",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "env": {
+        "GITHUB_TOKEN": "${config:d365Update.githubToken}",
+        "DEBUG": "true"
+      },
+      "console": "integratedTerminal",
+      "preLaunchTask": "npm: build"
+    },
+    {
+      "name": "Debug MCP with Inspector",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "@modelcontextprotocol/inspector",
+        "node",
+        "${workspaceFolder}/dist/mcp/index.js"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "${config:d365Update.githubToken}"
+      },
+      "console": "integratedTerminal",
+      "preLaunchTask": "npm: build"
+    }
+  ]
+}
