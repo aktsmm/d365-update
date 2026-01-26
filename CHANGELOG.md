@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2026-01-26
+
+### Fixed
+
+- 📝 出力指示のコメントを修正: 「日本語に翻訳」→「ユーザーの言語に翻訳」
+  - ロケールに応じて適切な言語で翻訳されるよう表現を修正
+
 ## [0.2.4] - 2026-01-26
 
 ### Changed
