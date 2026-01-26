@@ -29,6 +29,8 @@
 - ⚙️ **Zero Config**: Automatically registers as MCP tool on installation
 - 📅 **Recent Changes**: Track file modifications within the last week
 - 🔗 **Reference URLs**: Direct links to GitHub source files
+- 🌐 **Multi-language Support**: Auto-detects user language and returns localized Microsoft Learn URLs
+- 🗣️ **Auto Translation**: Copilot translates titles and summaries to your language
 
 ## 📦 Installation
 
@@ -93,7 +95,8 @@ Ask Copilot Chat like this:
 | `version`  | string | Filter by version (e.g., `10.0.41`)                      |
 | `dateFrom` | string | Date range start (`YYYY-MM-DD`)                          |
 | `dateTo`   | string | Date range end (`YYYY-MM-DD`)                            |
-| `limit`    | number | Max results (1-100, default: 20)                         |
+| `locale`   | string | Language for URLs (e.g., `ja-jp`, `en-us`). Auto-detected |
+| `limit`    | number | Max results (default: all matching results)              |
 
 ### Response Example
 
@@ -108,7 +111,9 @@ Ask Copilot Chat like this:
       "product": "Dynamics 365 Finance",
       "version": "10.0.41",
       "summary": "New features include...",
-      "fileUrl": "https://github.com/MicrosoftDocs/..."
+      "docsUrl": "https://learn.microsoft.com/en-us/dynamics365/finance/...",
+      "githubUrl": "https://github.com/MicrosoftDocs/.../blob/main/...",
+      "githubCommitsUrl": "https://github.com/MicrosoftDocs/.../commits/main/..."
     }
   ]
 }

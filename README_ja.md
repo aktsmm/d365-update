@@ -29,6 +29,8 @@
 - ⚙️ **設定不要**: インストールするだけで MCP ツールとして自動登録
 - 📅 **最新の変更を追跡**: 直近1週間のファイル更新を検出
 - 🔗 **参照URL**: GitHub ソースファイルへの直接リンク
+- 🌐 **多言語対応**: ユーザーの言語を自動検出し、ローカライズされた Microsoft Learn URL を返却
+- 🗣️ **自動翻訳**: Copilot がタイトルや概要をあなたの言語に翻訳
 
 ## 📦 インストール
 
@@ -93,7 +95,8 @@ Copilot Chat でこのように聞いてください:
 | `version`  | string | バージョンでフィルタ（例: `10.0.41`）        |
 | `dateFrom` | string | 日付範囲の開始（`YYYY-MM-DD`）               |
 | `dateTo`   | string | 日付範囲の終了（`YYYY-MM-DD`）               |
-| `limit`    | number | 最大結果数（1-100、デフォルト: 20）          |
+| `locale`   | string | URL の言語（例: `ja-jp`, `en-us`）自動検出 |
+| `limit`    | number | 最大結果数（デフォルト: 全件）              |
 
 ### レスポンス例
 
@@ -108,7 +111,9 @@ Copilot Chat でこのように聞いてください:
       "product": "Dynamics 365 Finance",
       "version": "10.0.41",
       "summary": "New features include...",
-      "fileUrl": "https://github.com/MicrosoftDocs/..."
+      "docsUrl": "https://learn.microsoft.com/ja-jp/dynamics365/finance/...",
+      "githubUrl": "https://github.com/MicrosoftDocs/.../blob/main/...",
+      "githubCommitsUrl": "https://github.com/MicrosoftDocs/.../commits/main/..."
     }
   ]
 }
