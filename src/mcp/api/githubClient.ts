@@ -244,11 +244,63 @@ export async function fetchAndParseFile(
     gaDate: null,
     commitSha: null,
     commitDate: null,
+    firstCommitDate: null,
     fileUrl: rawUrl
       .replace("raw.githubusercontent.com", "github.com")
       .replace("/main/", "/blob/main/"),
     rawContentUrl: rawUrl,
   };
+}
+
+/**
+ * ファイルの初回コミット日を取得
+ */
+export async function getFileFirstCommitDate(
+  owner: string,
+  repo: string,
+  filePath: string,
+  token?: string,
+): Promise<{ date: string; sha: string } | null> {
+  // per_page=1 で最後のページを取得することで初回コミットを取得
+  // まず全コミット数を確認
+  const url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${filePath}&per_page=1`;
+
+  try {
+    const response = await githubFetch(url, token);
+
+    // Link ヘッダーから最後のページを取得
+    const linkHeader = response.headers.get("Link");
+    if (linkHeader) {
+      const lastMatch = linkHeader.match(/<([^>]+)>;\s*rel="last"/);
+      if (lastMatch) {
+        // 最後のページを取得
+        const lastResponse = await githubFetch(lastMatch[1], token);
+        const lastData = (await lastResponse.json()) as GitHubCommit[];
+        if (lastData.length > 0) {
+          return {
+            date: lastData[lastData.length - 1].commit.author.date,
+            sha: lastData[lastData.length - 1].sha,
+          };
+        }
+      }
+    }
+
+    // ページネーションがない場合（コミットが1つだけ）
+    const data = (await response.json()) as GitHubCommit[];
+    if (data.length > 0) {
+      return {
+        date: data[0].commit.author.date,
+        sha: data[0].sha,
+      };
+    }
+  } catch (error) {
+    logger.warn("Failed to get file first commit date", {
+      filePath,
+      error: String(error),
+    });
+  }
+
+  return null;
 }
 
 /**

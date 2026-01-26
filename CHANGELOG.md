@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7] - 2026-01-26
+
+### Added
+
+- 🆕 **updateType フィールド追加**: 検索結果に「新規ページ」か「既存ページ更新」かを判定する `updateType` を追加
+  - `"new"` = 🆕 新規ページ（新しいリリースノート）
+  - `"updated"` = 📝 既存ページの更新
+- 📅 **初回コミット日（first_commit_date）** をデータベースに保存
+  - firstCommitDate と commitDate の差分から新規/更新を自動判定
+- 📝 **概要（summary）のフォールバック表示**: description がない場合でもタイトルから概要を生成
+
+### Changed
+
+- 🔧 データベースマイグレーション機能を追加（既存DBに first_commit_date カラムを自動追加）
+- 📋 ツールの出力指示を強化: updateType の表示方法を明記
+
 ## [0.2.6] - 2026-01-26
 
 ### Changed

@@ -17,6 +17,7 @@ export interface D365Update {
   gaDate: string | null;
   commitSha: string | null;
   commitDate: string | null;
+  firstCommitDate: string | null;
   fileUrl: string;
   rawContentUrl: string;
 }

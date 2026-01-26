@@ -70,8 +70,8 @@ export function upsertUpdate(db: Database.Database, update: D365Update): void {
     INSERT INTO d365_updates (
       file_path, title, description, product, version,
       release_date, preview_date, ga_date,
-      commit_sha, commit_date, file_url, raw_content_url
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      commit_sha, commit_date, first_commit_date, file_url, raw_content_url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(file_path) DO UPDATE SET
       title = excluded.title,
       description = excluded.description,
@@ -82,6 +82,7 @@ export function upsertUpdate(db: Database.Database, update: D365Update): void {
       ga_date = excluded.ga_date,
       commit_sha = excluded.commit_sha,
       commit_date = excluded.commit_date,
+      first_commit_date = COALESCE(d365_updates.first_commit_date, excluded.first_commit_date),
       file_url = excluded.file_url,
       raw_content_url = excluded.raw_content_url,
       updated_at = datetime('now')
@@ -97,6 +98,7 @@ export function upsertUpdate(db: Database.Database, update: D365Update): void {
     update.gaDate,
     update.commitSha,
     update.commitDate,
+    update.firstCommitDate,
     update.fileUrl,
     update.rawContentUrl,
   );
@@ -148,6 +150,23 @@ export function updateCommitDate(
 }
 
 /**
+ * ファイルの初回コミット日を更新
+ */
+export function updateFirstCommitDate(
+  db: Database.Database,
+  filePath: string,
+  firstCommitDate: string,
+): void {
+  db.prepare(
+    `
+    UPDATE d365_updates 
+    SET first_commit_date = ?, updated_at = datetime('now')
+    WHERE file_path LIKE ? AND first_commit_date IS NULL
+  `,
+  ).run(firstCommitDate, `%${filePath}`);
+}
+
+/**
  * 全ファイルの SHA マップを取得（差分同期用）
  */
 export function getFileShaMap(db: Database.Database): Map<string, string> {
@@ -177,6 +196,7 @@ export function searchUpdates(
       d.product, d.version, d.release_date as releaseDate,
       d.preview_date as previewDate, d.ga_date as gaDate,
       d.commit_sha as commitSha, d.commit_date as commitDate,
+      d.first_commit_date as firstCommitDate,
       d.file_url as fileUrl, d.raw_content_url as rawContentUrl
     FROM d365_updates d
   `;
@@ -192,6 +212,7 @@ export function searchUpdates(
         d.product, d.version, d.release_date as releaseDate,
         d.preview_date as previewDate, d.ga_date as gaDate,
         d.commit_sha as commitSha, d.commit_date as commitDate,
+        d.first_commit_date as firstCommitDate,
         d.file_url as fileUrl, d.raw_content_url as rawContentUrl
       FROM d365_updates d
       JOIN d365_updates_fts fts ON d.id = fts.rowid
@@ -272,6 +293,7 @@ export function getUpdateById(
       product, version, release_date as releaseDate,
       preview_date as previewDate, ga_date as gaDate,
       commit_sha as commitSha, commit_date as commitDate,
+      first_commit_date as firstCommitDate,
       file_url as fileUrl, raw_content_url as rawContentUrl
     FROM d365_updates
     WHERE id = ?

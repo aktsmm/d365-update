@@ -9,18 +9,23 @@
  *
  * ### 各アップデートの表示形式（Markdown）:
  * ```
- * ### [番号]. [タイトル（ユーザーの言語に翻訳）]
- * **製品**: [製品名] | **日付**: [日付]
- * **概要**: [概要をユーザーの言語で]
+ * ### [番号]. [updateType アイコン] [タイトル（ユーザーの言語に翻訳）]
+ * **製品**: [製品名] | **日付**: [日付] | **種別**: [🆕 新規 or 📝 更新]
+ * **概要**: [summary をユーザーの言語で翻訳して表示]
  *
  * 🔗 [MS Learn (日本語)](docsUrl_ja) | [GitHub Commits](githubCommitsUrl)
  * ```
  *
+ * **updateType の表示**:
+ * - "new" → 🆕 新規ページ（新しいリリースノート）
+ * - "updated" → 📝 更新（既存ページの更新）
+ *
  * **重要ルール**:
  * 1. title と summary は必ずユーザーの言語に翻訳して表示
  * 2. 全件を省略せず表示（「...他N件」のような省略は禁止）
- * 3. URLはインラインリンク形式で出力（表形式は使わない）
- * 4. get_d365_update を追加で呼ぶ必要はない（この検索結果で完結）
+ * 3. summary は必ず表示すること（概要がないと情報が不足する）
+ * 4. URLはインラインリンク形式で出力（表形式は使わない）
+ * 5. get_d365_update を追加で呼ぶ必要はない（この検索結果で完結）
  */
 
 import { z } from "zod";
@@ -168,6 +173,32 @@ export async function executeSearchD365Updates(
         summary = update.description.substring(0, 600);
         if (update.description.length > 600) summary += "...";
       }
+    } else {
+      // description がない場合はタイトルから推測
+      summary = `Details about ${update.title}`;
+    }
+
+    // 更新タイプを判定（新規ページ or 既存ページ更新）
+    // firstCommitDate と commitDate が近い（1週間以内）なら新規、それ以外は更新
+    let updateType: "new" | "updated" = "updated";
+    if (update.firstCommitDate && update.commitDate) {
+      const firstDate = new Date(update.firstCommitDate);
+      const lastDate = new Date(update.commitDate);
+      const diffDays =
+        (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (diffDays <= 7) {
+        updateType = "new";
+      }
+    } else if (!update.firstCommitDate && update.commitDate) {
+      // firstCommitDate がない場合、commitDate と releaseDate を比較
+      // または、タイトルに年月が含まれていれば新規リリースノートと判定
+      const titleHasDate =
+        /\d{4}|wave|early access|january|february|march|april|may|june|july|august|september|october|november|december/i.test(
+          update.title,
+        );
+      if (titleHasDate) {
+        updateType = "new";
+      }
     }
 
     // MS Learn URL を日本語・英語両方生成
@@ -186,6 +217,7 @@ export async function executeSearchD365Updates(
       version: update.version,
       releaseDate: update.releaseDate,
       commitDate: update.commitDate,
+      updateType, // "new" = 新規ページ, "updated" = 既存ページ更新
       summary,
       // Microsoft Learn Docs URL（日本語・英語両方）
       docsUrl_ja: docsUrlJa,
@@ -252,6 +284,7 @@ export async function executeSearchD365Updates(
         version: r.version,
         releaseDate: r.releaseDate,
         commitDate: r.commitDate,
+        updateType: r.updateType, // "new" = 🆕 新規ページ, "updated" = 📝 既存ページ更新
         summary: r.summary,
         docsUrl_ja: r.docsUrl_ja,
         docsUrl_en: r.docsUrl_en,

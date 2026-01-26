@@ -12,6 +12,7 @@ import {
   fetchAndParseFile,
   getRecentCommits,
   getRecentlyChangedFiles,
+  getFileFirstCommitDate,
 } from "../api/githubClient.js";
 import {
   upsertUpdate,
@@ -19,8 +20,10 @@ import {
   updateSyncCheckpoint,
   getSyncCheckpoint,
   updateCommitDate,
+  updateFirstCommitDate,
   getFileShaMap,
 } from "../database/queries.js";
+import { TARGET_REPOSITORIES } from "../types.js";
 import * as logger from "../utils/logger.js";
 
 /**
@@ -148,6 +151,37 @@ export async function syncFromGitHub(
         });
       }
     }
+
+    // 初回コミット日を取得（変更されたファイルのみ、API 負荷を考慮）
+    // 変更されたファイルの初回コミット日のみ取得（最大10件）
+    let firstCommitFetched = 0;
+    for (const [filePath] of [...changedFiles].slice(0, 10)) {
+      try {
+        // ファイルパスからリポジトリ情報を推測
+        for (const repo of TARGET_REPOSITORIES) {
+          if (filePath.startsWith(repo.basePath)) {
+            const firstCommit = await getFileFirstCommitDate(
+              repo.owner,
+              repo.repo,
+              filePath,
+              token,
+            );
+            if (firstCommit) {
+              updateFirstCommitDate(db, filePath, firstCommit.date);
+              firstCommitFetched++;
+            }
+            break;
+          }
+        }
+      } catch (error) {
+        logger.warn("Failed to get first commit date", {
+          filePath,
+          error: String(error),
+        });
+      }
+    }
+
+    logger.info("First commit dates updated", { count: firstCommitFetched });
 
     const durationMs = Date.now() - startTime;
 

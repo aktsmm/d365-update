@@ -66,6 +66,9 @@ export function initializeDatabase(
   // スキーマ適用
   if (!isSchemaInitialized(db)) {
     applySchema(db);
+  } else {
+    // 既存DBの場合はマイグレーションを適用
+    migrateSchema(db);
   }
 
   return db;
@@ -111,6 +114,25 @@ function applySchema(db: Database.Database): void {
   const schemaPath = join(__dirname, "schema.sql");
   const schemaSql = readFileSync(schemaPath, "utf-8");
   db.exec(schemaSql);
+}
+
+/**
+ * スキーママイグレーションを適用
+ * 既存のデータベースに新しいカラムを追加
+ */
+export function migrateSchema(db: Database.Database): void {
+  // first_commit_date カラムが存在するか確認
+  const columns = db.prepare("PRAGMA table_info(d365_updates)").all() as Array<{
+    name: string;
+  }>;
+
+  const hasFirstCommitDate = columns.some(
+    (col) => col.name === "first_commit_date",
+  );
+
+  if (!hasFirstCommitDate) {
+    db.exec("ALTER TABLE d365_updates ADD COLUMN first_commit_date TEXT");
+  }
 }
 
 /**

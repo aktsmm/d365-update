@@ -38,11 +38,15 @@ CREATE TABLE IF NOT EXISTS d365_updates (
     ga_date TEXT,
     commit_sha TEXT,
     commit_date TEXT,
+    first_commit_date TEXT,
     file_url TEXT NOT NULL,
     raw_content_url TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- マイグレーション: first_commit_date カラムが存在しない場合に追加
+-- ALTER TABLE d365_updates ADD COLUMN first_commit_date TEXT;
 
 -- インデックス
 CREATE INDEX IF NOT EXISTS idx_d365_updates_product ON d365_updates(product);
