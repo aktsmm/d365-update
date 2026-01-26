@@ -1,0 +1,122 @@
+{
+  "name": "d365-update",
+  "displayName": "D365 UPDATE MCP",
+  "description": "Search and retrieve Dynamics 365 update information from GitHub Docs via Copilot Chat",
+  "version": "0.1.0",
+  "publisher": "yamapan",
+  "license": "CC-BY-NC-4.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aktsmm/Ag-Ext-D365_UPDATE"
+  },
+  "icon": "resources/icon.png",
+  "galleryBanner": {
+    "color": "#002050",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other",
+    "Data Science"
+  ],
+  "keywords": [
+    "Dynamics 365",
+    "D365",
+    "Finance",
+    "Supply Chain",
+    "Human Resources",
+    "Commerce",
+    "Copilot",
+    "MCP"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "d365-update.syncUpdates",
+        "title": "D365 UPDATE: Sync Updates from GitHub"
+      },
+      {
+        "command": "d365-update.openSettings",
+        "title": "D365 UPDATE: Open Settings"
+      },
+      {
+        "command": "d365-update.showVersion",
+        "title": "D365 UPDATE: Show Version Info"
+      }
+    ],
+    "configuration": {
+      "title": "D365 UPDATE",
+      "properties": {
+        "d365Update.githubToken": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "GitHub Personal Access Token (increases rate limit from 60 to 5,000 requests/hour). [Create a token here](https://github.com/settings/tokens/new?scopes=public_repo&description=D365%20UPDATE%20MCP) - **Important**: After creating, [Configure SSO](https://github.com/settings/tokens) and authorize for MicrosoftDocs. Token must expire within 90 days.",
+          "order": 1
+        },
+        "d365Update.autoSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically sync updates on startup",
+          "order": 2
+        },
+        "d365Update.syncIntervalHours": {
+          "type": "number",
+          "default": 24,
+          "description": "Hours between automatic sync (default: 24)",
+          "order": 3
+        },
+        "d365Update.hideTokenNotification": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide the GitHub Token setup notification",
+          "order": 4
+        }
+      }
+    },
+    "mcpServers": {
+      "d365-update": {
+        "command": "node",
+        "args": [
+          "${extensionPath}/dist/mcp/index.js"
+        ],
+        "env": {
+          "GITHUB_TOKEN": "${config:d365Update.githubToken}",
+          "D365_UPDATE_GITHUB_TOKEN": "${config:d365Update.githubToken}"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run build:extension && npm run build:mcp",
+    "build:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "build:mcp": "tsc -p tsconfig.mcp.json && node scripts/copy-schema.mjs",
+    "watch": "tsc -watch -p ./",
+    "dev:mcp": "tsx src/mcp/index.ts",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/mcp/index.ts",
+    "lint": "eslint src --ext ts",
+    "test": "vitest run",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.0",
+    "better-sqlite3": "^12.5.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.2",
+    "@types/vscode": "^1.96.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.15",
+    "@vscode/vsce": "^3.2.0"
+  }
+}
