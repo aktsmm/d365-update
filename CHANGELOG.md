@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2026-01-26
+
+### Fixed
+
+- 🐛 MCP サーバー起動失敗を修正（`@modelcontextprotocol/sdk` が見つからないエラー）
+- 📦 esbuild で依存関係をバンドルするように変更
+- 📦 `better-sqlite3` を拡張機能パッケージに含めるよう `.vscodeignore` を修正
+
 ## [0.1.0] - 2026-01-26
 
 ### Added
