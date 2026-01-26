@@ -3,7 +3,7 @@
 [![Beta](https://img.shields.io/badge/Status-Beta-orange?style=flat-square)]()
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/yamapan.d365-update?style=flat-square&label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/yamapan.d365-update?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
-[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg?style=flat-square)](LICENSE)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg?style=flat-square)](LICENSE)
 
 > ⚠️ **ベータ版**: この拡張機能は現在ベータ版です。機能や API は変更される可能性があります。フィードバックやバグ報告を歓迎します！
 
@@ -222,8 +222,9 @@ npm run package
 
 ## 📄 ライセンス
 
-[CC-BY-NC-4.0](LICENSE)
+[CC-BY-NC-SA-4.0](LICENSE)
 
 ---
 
 © 2026 yamapan (aktsmm)
+
