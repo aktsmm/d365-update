@@ -1,8 +1,11 @@
 # D365 UPDATE MCP
 
+[![Beta](https://img.shields.io/badge/Status-Beta-orange?style=flat-square)]()
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/yamapan.d365-update?style=flat-square&label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/yamapan.d365-update?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg?style=flat-square)](LICENSE)
+
+> ⚠️ **Beta Version**: This extension is currently in beta. Features and APIs may change. Feedback and bug reports are welcome!
 
 <p align="center">
   <strong>Search and retrieve Dynamics 365 update information from GitHub Docs via Copilot Chat</strong>

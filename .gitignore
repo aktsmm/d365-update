@@ -11,6 +11,7 @@ src/mcp/test-*.ts
 
 # Output
 output_sessions/
+exports/
 
 # GitHub Copilot/Agent files (user-specific)
 .github/
