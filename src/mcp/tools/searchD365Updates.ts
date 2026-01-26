@@ -9,6 +9,39 @@ import { getDatabase } from "../database/database.js";
 import { searchUpdates, getProducts } from "../database/queries.js";
 
 /**
+ * GitHub ファイルパスから Microsoft Learn Docs URL を生成
+ * @param fileUrl - GitHub のファイル URL
+ * @param locale - ロケール (例: 'ja-jp', 'en-us')
+ * @returns Microsoft Learn の URL
+ */
+function convertToDocsUrl(fileUrl: string, locale: string): string | null {
+  // GitHub URL パターン:
+  // https://github.com/MicrosoftDocs/dynamics-365-unified-operations-public/blob/main/articles/...
+  // https://github.com/MicrosoftDocs/dynamics-365-project-operations/blob/main/articles/...
+
+  const match = fileUrl.match(
+    /github\.com\/MicrosoftDocs\/([^/]+)\/blob\/main\/articles\/(.+)\.md$/,
+  );
+  if (!match) return null;
+
+  const [, repo, path] = match;
+
+  // リポジトリ別のドキュメントベース URL マッピング
+  const repoToDocsBase: Record<string, string> = {
+    "dynamics-365-unified-operations-public": "dynamics365/unified-operations",
+    "dynamics-365-project-operations": "dynamics365/project-operations",
+    "dynamics365smb-docs": "dynamics365/business-central",
+  };
+
+  const docsBase = repoToDocsBase[repo];
+  if (!docsBase) return null;
+
+  // パスから言語固有のセグメントを除去し、URL を構築
+  // articles/finance/whats-new/whats-new-*.md → /dynamics365/unified-operations/finance/whats-new/whats-new-*
+  return `https://learn.microsoft.com/${locale}/${docsBase}/${path}`;
+}
+
+/**
  * ツール入力スキーマ
  */
 export const searchD365UpdatesSchema = z.object({
@@ -40,12 +73,19 @@ export const searchD365UpdatesSchema = z.object({
     .describe(
       "Filter by commit date range end (ISO 8601 format, e.g., '2024-12-31')",
     ),
+  locale: z
+    .string()
+    .optional()
+    .describe(
+      "IMPORTANT: Set this based on user's language. Use 'ja-jp' if user writes in Japanese, 'en-us' for English, etc. This affects Microsoft Learn URLs. If user asks in Japanese, ALWAYS set to 'ja-jp'.",
+    ),
   limit: z
     .number()
     .min(1)
-    .max(100)
     .optional()
-    .describe("Maximum number of results (1-100, default: 20)"),
+    .describe(
+      "Maximum number of results. If not specified, returns all matching results.",
+    ),
   offset: z
     .number()
     .min(0)
@@ -111,6 +151,15 @@ export async function executeSearchD365Updates(
       }
     }
 
+    // ロケール（デフォルト: en-us）
+    const locale = input.locale || "en-us";
+    const docsUrl = convertToDocsUrl(update.fileUrl, locale);
+
+    // GitHub コミット履歴リンクを生成
+    // fileUrl: https://github.com/MicrosoftDocs/dynamics-365-unified-operations-public/blob/main/articles/...
+    // → commits: https://github.com/MicrosoftDocs/dynamics-365-unified-operations-public/commits/main/articles/...
+    const commitsUrl = update.fileUrl?.replace("/blob/", "/commits/") || null;
+
     return {
       id: update.id,
       title: update.title,
@@ -119,8 +168,11 @@ export async function executeSearchD365Updates(
       releaseDate: update.releaseDate,
       commitDate: update.commitDate,
       summary,
-      // GitHub ソースへの直リンク
-      sourceUrl: update.fileUrl,
+      // Microsoft Learn Docs URL（言語対応）
+      docsUrl,
+      // GitHub ソース・コミット履歴
+      githubUrl: update.fileUrl,
+      githubCommitsUrl: commitsUrl,
     };
   });
 

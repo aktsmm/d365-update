@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-01-26
+
+### Added
+
+- 🌐 `locale` パラメータ追加: ユーザーの言語に応じた Microsoft Learn URL を生成
+- 📝 `docsUrl`: Microsoft Learn ページへの直接リンク（ロケール対応）
+- 🔗 `githubCommitsUrl`: GitHub コミット履歴へのリンク
+- 🗣️ 自動翻訳指示: Copilot がユーザーの言語に合わせてタイトル・概要を翻訳
+
+### Changed
+
+- 📈 `limit` デフォルト値を変更: 20件 → 制限なし（全件取得）
+- 📆 日付未指定時は過去1ヶ月のデータを返却
+
+### Improved
+
+- 🎯 ツール description を強化: 言語検出・翻訳指示を追加
+
 ## [0.1.3] - 2026-01-26
 
 ### Fixed

@@ -13,6 +13,12 @@ import { getUpdateById } from "../database/queries.js";
  */
 export const getD365UpdateSchema = z.object({
   id: z.number().describe("Unique identifier of the D365 update (required)"),
+  locale: z
+    .string()
+    .optional()
+    .describe(
+      "IMPORTANT: Set this based on user's language. Use 'ja-jp' if user writes in Japanese, 'en-us' for English. This affects Microsoft Learn URLs in response.",
+    ),
 });
 
 export type GetD365UpdateInput = z.infer<typeof getD365UpdateSchema>;
@@ -21,12 +27,11 @@ export type GetD365UpdateInput = z.infer<typeof getD365UpdateSchema>;
  * 参考 URL を生成
  */
 function generateReferenceUrls(
-  title: string,
   product: string,
-  version?: string | null,
+  version: string | null | undefined,
+  locale: string,
 ): {
   learnSearchUrl: string;
-  learnSearchUrlJa: string;
   productDocsUrl: string;
 } {
   // 製品名からドキュメントパスを推測
@@ -40,17 +45,41 @@ function generateReferenceUrls(
           ? "dynamics365/human-resources"
           : product.toLowerCase().includes("business central")
             ? "dynamics365/business-central"
-            : "dynamics365";
+            : product.toLowerCase().includes("project operations")
+              ? "dynamics365/project-operations"
+              : "dynamics365";
 
   const searchTerms = encodeURIComponent(
     `${product} ${version || ""} what's new`,
   );
 
   return {
-    learnSearchUrl: `https://learn.microsoft.com/en-us/search/?terms=${searchTerms}`,
-    learnSearchUrlJa: `https://learn.microsoft.com/ja-jp/search/?terms=${searchTerms}`,
-    productDocsUrl: `https://learn.microsoft.com/ja-jp/${productPath}/get-started/whats-new-home-page`,
+    learnSearchUrl: `https://learn.microsoft.com/${locale}/search/?terms=${searchTerms}`,
+    productDocsUrl: `https://learn.microsoft.com/${locale}/${productPath}/get-started/whats-new-home-page`,
   };
+}
+
+/**
+ * GitHub ファイルパスから Microsoft Learn Docs URL を生成
+ */
+function convertToDocsUrl(fileUrl: string, locale: string): string | null {
+  const match = fileUrl.match(
+    /github\.com\/MicrosoftDocs\/([^/]+)\/blob\/main\/articles\/(.+)\.md$/,
+  );
+  if (!match) return null;
+
+  const [, repo, path] = match;
+
+  const repoToDocsBase: Record<string, string> = {
+    "dynamics-365-unified-operations-public": "dynamics365/unified-operations",
+    "dynamics-365-project-operations": "dynamics365/project-operations",
+    "dynamics365smb-docs": "dynamics365/business-central",
+  };
+
+  const docsBase = repoToDocsBase[repo];
+  if (!docsBase) return null;
+
+  return `https://learn.microsoft.com/${locale}/${docsBase}/${path}`;
 }
 
 /**
@@ -70,12 +99,17 @@ export async function executeGetD365Update(
     });
   }
 
+  // ロケール（デフォルト: en-us）
+  const locale = input.locale || "en-us";
+
   // 参考 URL を生成
-  const urls = generateReferenceUrls(
-    update.title,
-    update.product,
-    update.version,
-  );
+  const urls = generateReferenceUrls(update.product, update.version, locale);
+
+  // Docs URL を生成
+  const docsUrl = convertToDocsUrl(update.fileUrl, locale);
+
+  // GitHub コミット履歴リンク
+  const commitsUrl = update.fileUrl?.replace("/blob/", "/commits/") || null;
 
   return JSON.stringify(
     {
@@ -88,13 +122,15 @@ export async function executeGetD365Update(
       previewDate: update.previewDate,
       gaDate: update.gaDate,
       lastCommitDate: update.commitDate,
-      // ソースファイル
-      sourceUrl: update.fileUrl,
+      // Microsoft Learn Docs URL（言語対応）
+      docsUrl,
+      // GitHub ソース・コミット履歴
+      githubUrl: update.fileUrl,
+      githubCommitsUrl: commitsUrl,
       rawContentUrl: update.rawContentUrl,
       // 参考リンク
       references: {
-        learnSearchUrl: urls.learnSearchUrlJa,
-        learnSearchUrlEn: urls.learnSearchUrl,
+        learnSearchUrl: urls.learnSearchUrl,
         productDocsUrl: urls.productDocsUrl,
       },
     },

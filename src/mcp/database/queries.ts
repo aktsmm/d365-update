@@ -229,11 +229,15 @@ export function searchUpdates(
   // ソート (release_date 優先、なければ commit_date)
   sql += " ORDER BY COALESCE(d.release_date, d.commit_date) DESC NULLS LAST";
 
-  // リミット
-  const limit = filters.limit ?? 20;
-  const offset = filters.offset ?? 0;
-  sql += ` LIMIT ? OFFSET ?`;
-  params.push(limit, offset);
+  // リミット（指定がなければ全件）
+  if (filters.limit !== undefined) {
+    sql += " LIMIT ?";
+    params.push(filters.limit);
+  }
+  if (filters.offset !== undefined && filters.offset > 0) {
+    sql += " OFFSET ?";
+    params.push(filters.offset);
+  }
 
   return db.prepare(sql).all(...params) as D365Update[];
 }

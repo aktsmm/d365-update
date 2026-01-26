@@ -31,7 +31,7 @@ export function createServer(): McpServer {
   // search_d365_updates ツール
   server.tool(
     "search_d365_updates",
-    "Search Dynamics 365 update information from GitHub Docs. Returns lightweight metadata. Supports full-text search, product/version/date filters, and pagination. Use get_d365_update to retrieve full details.",
+    "Search Dynamics 365 update information from GitHub Docs. Returns lightweight metadata. Supports full-text search, product/version/date filters, and pagination. Use get_d365_update to retrieve full details. IMPORTANT: If user writes in Japanese, set locale='ja-jp' to return Japanese Microsoft Learn URLs. ALWAYS translate the title and summary to the user's language when presenting results (e.g., translate to Japanese if user asks in Japanese).",
     searchD365UpdatesSchema.shape,
     async (input) => {
       try {
@@ -57,7 +57,7 @@ export function createServer(): McpServer {
   // get_d365_update ツール
   server.tool(
     "get_d365_update",
-    "Retrieve complete details of a specific D365 update by ID. Includes full description, product info, version, and reference URLs. Use after search_d365_updates to get detailed content.",
+    "Retrieve complete details of a specific D365 update by ID. Includes full description, product info, version, and reference URLs. Use after search_d365_updates to get detailed content. IMPORTANT: If user writes in Japanese, set locale='ja-jp' to return Japanese Microsoft Learn URLs. ALWAYS translate the title, description and all content to the user's language when presenting results (e.g., translate to Japanese if user asks in Japanese).",
     getD365UpdateSchema.shape,
     async (input) => {
       try {
