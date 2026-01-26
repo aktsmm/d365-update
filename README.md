@@ -35,6 +35,50 @@
 - 🌐 **Multi-language Support**: Auto-detects user language and returns localized Microsoft Learn URLs
 - 🗣️ **Auto Translation**: Copilot translates titles and summaries to your language
 
+## 🛠️ Technical Highlights
+
+### 📦 Bundled Database - Zero Wait on First Use
+
+The extension ships with a pre-built database containing the latest update information.
+New users can search immediately after installation—no sync required!
+
+- Database is bundled at package time
+- Automatically copied to user directory on first launch
+- Users can sync later to get the absolute latest data
+
+### 🚀 Repository-Level Incremental Sync
+
+Instead of fetching all files every time, we implemented **two-level diff checking**:
+
+| Level | What it checks | API calls |
+|-------|---------------|-----------|
+| **1. Repository** | Latest commit SHA per repo | 16 calls (lightweight) |
+| **2. File** | File content SHA | Only for changed repos |
+
+**Result:**
+| Scenario | Time |
+|----------|------|
+| Full sync (force) | ~200s |
+| Incremental (changes) | ~26s |
+| **Incremental (no changes)** | **~3s** ⚡ |
+
+### ⚡ Parallel Processing
+
+All GitHub API calls leverage parallel execution with semaphore-based concurrency control:
+
+```
+Tree fetching:    4 parallel requests
+File processing:  5 parallel requests  
+Commit fetching:  4 parallel requests
+```
+
+### 🔄 Background Auto-Sync
+
+MCP server automatically syncs in the background on startup:
+- Non-blocking: Search works immediately using cached data
+- Incremental: Only fetches changes since last sync
+- Silent: No user intervention required
+
 ## 📦 Installation
 
 1. Search for "D365 UPDATE" in VS Code Extension Marketplace
