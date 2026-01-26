@@ -197,6 +197,65 @@ function parseFrontmatter(content: string): {
 }
 
 /**
+ * リポジトリの最新コミットSHAを取得（軽量チェック用）
+ * ツリー全体を取得せず、ブランチの最新コミットだけ確認
+ */
+export async function getRepositoryLatestCommitSha(
+  owner: string,
+  repo: string,
+  branch: string,
+  token?: string,
+): Promise<string | null> {
+  const url = `https://api.github.com/repos/${owner}/${repo}/commits/${branch}`;
+
+  try {
+    const response = await githubFetch(url, token);
+    const data = (await response.json()) as { sha: string };
+    return data.sha;
+  } catch (error) {
+    logger.warn("Failed to get latest commit SHA", {
+      owner,
+      repo,
+      error: String(error),
+    });
+    return null;
+  }
+}
+
+/**
+ * 全リポジトリの最新コミットSHAを並列取得
+ */
+export async function getAllRepositoryLatestShas(
+  token?: string,
+): Promise<Map<string, string>> {
+  logger.info("Checking repository latest commits (lightweight)", {
+    repoCount: TARGET_REPOSITORIES.length,
+  });
+
+  const results = await parallelLimit(
+    TARGET_REPOSITORIES,
+    PARALLEL_TREE_LIMIT,
+    async (repo) => {
+      const sha = await getRepositoryLatestCommitSha(
+        repo.owner,
+        repo.repo,
+        repo.branch,
+        token,
+      );
+      return { key: `${repo.owner}/${repo.repo}`, sha };
+    },
+  );
+
+  const shaMap = new Map<string, string>();
+  for (const { key, sha } of results) {
+    if (sha) shaMap.set(key, sha);
+  }
+
+  logger.info("Got repository SHAs", { count: shaMap.size });
+  return shaMap;
+}
+
+/**
  * リポジトリのツリーを取得
  */
 export async function getRepositoryTree(
@@ -281,6 +340,115 @@ export async function getWhatsNewFiles(token?: string): Promise<
   const results = repoResults.flat();
   logger.info("Found what's-new files", { count: results.length });
   return results;
+}
+
+/**
+ * 変更があったリポジトリのみの what's-new ファイル一覧を取得
+ * リポジトリレベルの差分チェックで高速化
+ */
+export async function getWhatsNewFilesIncremental(
+  previousShaMap: Map<string, string>,
+  token?: string,
+): Promise<{
+  files: Array<{
+    path: string;
+    url: string;
+    rawUrl: string;
+    product: string;
+    version: string | null;
+    sha: string;
+  }>;
+  newShaMap: Map<string, string>;
+  changedRepos: string[];
+  skippedRepos: string[];
+}> {
+  // 1. 全リポジトリの最新コミットSHAを取得（軽量）
+  const currentShaMap = await getAllRepositoryLatestShas(token);
+
+  // 2. 変更があったリポジトリを特定
+  const changedRepos: typeof TARGET_REPOSITORIES = [];
+  const skippedRepoNames: string[] = [];
+
+  for (const repo of TARGET_REPOSITORIES) {
+    const repoKey = `${repo.owner}/${repo.repo}`;
+    const previousSha = previousShaMap.get(repoKey);
+    const currentSha = currentShaMap.get(repoKey);
+
+    if (!previousSha || previousSha !== currentSha) {
+      changedRepos.push(repo);
+    } else {
+      skippedRepoNames.push(repoKey);
+    }
+  }
+
+  logger.info("Repository-level diff check", {
+    total: TARGET_REPOSITORIES.length,
+    changed: changedRepos.length,
+    skipped: skippedRepoNames.length,
+  });
+
+  // 3. 変更があったリポジトリのみツリー取得
+  if (changedRepos.length === 0) {
+    logger.info("No repositories changed, skipping tree fetch");
+    return {
+      files: [],
+      newShaMap: currentShaMap,
+      changedRepos: [],
+      skippedRepos: skippedRepoNames,
+    };
+  }
+
+  const repoResults = await parallelLimit(
+    changedRepos,
+    PARALLEL_TREE_LIMIT,
+    async (repo) => {
+      const tree = await getRepositoryTree(
+        repo.owner,
+        repo.repo,
+        repo.branch,
+        token,
+      );
+
+      const files: Array<{
+        path: string;
+        url: string;
+        rawUrl: string;
+        product: string;
+        version: string | null;
+        sha: string;
+      }> = [];
+
+      for (const item of tree) {
+        if (item.type !== "blob") continue;
+        if (!item.path.endsWith(".md")) continue;
+        if (!item.path.startsWith(repo.basePath)) continue;
+        if (!isWhatsNewFile(item.path)) continue;
+
+        files.push({
+          path: item.path,
+          url: `https://github.com/${repo.owner}/${repo.repo}/blob/${repo.branch}/${item.path}`,
+          rawUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repo.branch}/${item.path}`,
+          product: inferProduct(item.path),
+          version: extractVersion(item.path),
+          sha: item.sha,
+        });
+      }
+
+      return files;
+    },
+  );
+
+  const files = repoResults.flat();
+  logger.info("Found what's-new files from changed repos", {
+    count: files.length,
+  });
+
+  return {
+    files,
+    newShaMap: currentShaMap,
+    changedRepos: changedRepos.map((r) => `${r.owner}/${r.repo}`),
+    skippedRepos: skippedRepoNames,
+  };
 }
 
 /**

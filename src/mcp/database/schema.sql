@@ -79,6 +79,13 @@ CREATE TABLE IF NOT EXISTS d365_commits (
 
 CREATE INDEX IF NOT EXISTS idx_d365_commits_date ON d365_commits(date);
 
+-- リポジトリSHAテーブル（リポジトリレベル差分チェック用）
+CREATE TABLE IF NOT EXISTS repository_shas (
+    repo_key TEXT PRIMARY KEY,  -- 'owner/repo' 形式
+    latest_sha TEXT NOT NULL,
+    checked_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- コミットとファイルの関連テーブル
 CREATE TABLE IF NOT EXISTS commit_files (
     commit_sha TEXT NOT NULL,

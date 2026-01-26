@@ -2,7 +2,7 @@
  * 同期サービス
  *
  * GitHub から D365 アップデート情報を取得してデータベースに保存
- * 差分同期: SHA を比較して変更があったファイルのみ fetch
+ * リポジトリレベル差分チェック + ファイルレベル差分同期
  * 並列処理対応版
  */
 
@@ -10,6 +10,7 @@ import type Database from "better-sqlite3";
 import type { SyncResult } from "../types.js";
 import {
   getWhatsNewFiles,
+  getWhatsNewFilesIncremental,
   fetchAndParseFile,
   getRecentCommits,
   getRecentlyChangedFiles,
@@ -23,6 +24,8 @@ import {
   updateCommitDate,
   updateFirstCommitDate,
   getFileShaMap,
+  getRepositoryShaMap,
+  saveRepositoryShas,
 } from "../database/queries.js";
 import { TARGET_REPOSITORIES } from "../types.js";
 import * as logger from "../utils/logger.js";
@@ -77,14 +80,55 @@ export async function syncFromGitHub(
 
     logger.info("Starting sync from GitHub", { force, maxFiles });
 
-    // what's-new ファイル一覧を取得（SHA 含む）
-    const files = await getWhatsNewFiles(token);
+    // リポジトリレベル差分チェック（force=false の場合）
+    let files: Awaited<ReturnType<typeof getWhatsNewFiles>>;
+    let newRepoShaMap: Map<string, string> | null = null;
+
+    if (force) {
+      // 強制同期: 全リポジトリからファイル取得
+      files = await getWhatsNewFiles(token);
+    } else {
+      // インクリメンタル同期: 変更があったリポジトリのみ
+      const previousRepoShaMap = getRepositoryShaMap(db);
+      const result = await getWhatsNewFilesIncremental(
+        previousRepoShaMap,
+        token,
+      );
+
+      files = result.files;
+      newRepoShaMap = result.newShaMap;
+
+      logger.info("Incremental sync result", {
+        changedRepos: result.changedRepos.length,
+        skippedRepos: result.skippedRepos.length,
+        filesFromChangedRepos: files.length,
+      });
+
+      // 変更がなければ早期リターン
+      if (result.changedRepos.length === 0) {
+        const durationMs = Date.now() - startTime;
+        updateSyncCheckpoint(db, {
+          lastSync: new Date().toISOString(),
+          syncStatus: "idle",
+          lastSyncDurationMs: durationMs,
+        });
+        logger.info("No repository changes detected, sync skipped", {
+          durationMs,
+        });
+        return {
+          success: true,
+          updatesCount: 0,
+          commitsCount: 0,
+          durationMs,
+        };
+      }
+    }
 
     // 既存ファイルの SHA マップを取得
     const existingShaMap = getFileShaMap(db);
     const isFirstSync = existingShaMap.size === 0;
 
-    // 差分同期: SHA が変わったファイルのみ処理
+    // ファイルレベル差分同期: SHA が変わったファイルのみ処理
     const filesToProcess = files
       .filter((file) => {
         if (force || isFirstSync) return true;
@@ -206,6 +250,12 @@ export async function syncFromGitHub(
     logger.info("First commit dates updated", { count: firstCommitFetched });
 
     const durationMs = Date.now() - startTime;
+
+    // リポジトリSHAを保存（次回のインクリメンタル同期用）
+    if (newRepoShaMap) {
+      saveRepositoryShas(db, newRepoShaMap);
+      logger.info("Repository SHAs saved for incremental sync");
+    }
 
     // 同期完了
     updateSyncCheckpoint(db, {

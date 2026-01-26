@@ -173,7 +173,7 @@ function applySchema(db: Database.Database): void {
 
 /**
  * スキーママイグレーションを適用
- * 既存のデータベースに新しいカラムを追加
+ * 既存のデータベースに新しいカラム/テーブルを追加
  */
 export function migrateSchema(db: Database.Database): void {
   // first_commit_date カラムが存在するか確認
@@ -187,6 +187,23 @@ export function migrateSchema(db: Database.Database): void {
 
   if (!hasFirstCommitDate) {
     db.exec("ALTER TABLE d365_updates ADD COLUMN first_commit_date TEXT");
+  }
+
+  // repository_shas テーブルが存在するか確認
+  const hasRepoShasTable = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='repository_shas'",
+    )
+    .get() as { name: string } | undefined;
+
+  if (!hasRepoShasTable) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS repository_shas (
+        repo_key TEXT PRIMARY KEY,
+        latest_sha TEXT NOT NULL,
+        checked_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
   }
 }
 

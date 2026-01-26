@@ -184,6 +184,45 @@ export function getFileShaMap(db: Database.Database): Map<string, string> {
 }
 
 /**
+ * リポジトリSHAマップを取得（リポジトリレベル差分チェック用）
+ */
+export function getRepositoryShaMap(
+  db: Database.Database,
+): Map<string, string> {
+  try {
+    const rows = db
+      .prepare(`SELECT repo_key, latest_sha FROM repository_shas`)
+      .all() as Array<{ repo_key: string; latest_sha: string }>;
+
+    const map = new Map<string, string>();
+    for (const row of rows) {
+      map.set(row.repo_key, row.latest_sha);
+    }
+    return map;
+  } catch {
+    // テーブルが存在しない場合は空のマップを返す
+    return new Map();
+  }
+}
+
+/**
+ * リポジトリSHAを保存（リポジトリレベル差分チェック用）
+ */
+export function saveRepositoryShas(
+  db: Database.Database,
+  shaMap: Map<string, string>,
+): void {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO repository_shas (repo_key, latest_sha, checked_at)
+    VALUES (?, ?, datetime('now'))
+  `);
+
+  for (const [repoKey, sha] of shaMap) {
+    stmt.run(repoKey, sha);
+  }
+}
+
+/**
  * アップデートを検索
  */
 export function searchUpdates(
