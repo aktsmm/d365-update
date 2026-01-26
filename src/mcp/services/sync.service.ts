@@ -3,6 +3,7 @@
  *
  * GitHub から D365 アップデート情報を取得してデータベースに保存
  * 差分同期: SHA を比較して変更があったファイルのみ fetch
+ * 並列処理対応版
  */
 
 import type Database from "better-sqlite3";
@@ -25,6 +26,9 @@ import {
 } from "../database/queries.js";
 import { TARGET_REPOSITORIES } from "../types.js";
 import * as logger from "../utils/logger.js";
+
+/** 並列処理設定 */
+const PARALLEL_FILE_LIMIT = 5;
 
 /**
  * 同期オプション
@@ -99,20 +103,38 @@ export async function syncFromGitHub(
     let updatesCount = 0;
     let errorCount = 0;
 
-    // 各ファイルを処理（変更分のみ）
-    for (const file of filesToProcess) {
+    // ファイル処理を並列化（同時5件まで）
+    logger.info("Processing files (parallel)", {
+      count: filesToProcess.length,
+      parallelLimit: PARALLEL_FILE_LIMIT,
+    });
+
+    const processFile = async (file: (typeof filesToProcess)[0]) => {
       try {
         const update = await fetchAndParseFile(file.rawUrl, file.path, token);
-        // SHA を保存
         update.commitSha = file.sha;
-        upsertUpdate(db, update);
-        updatesCount++;
+        return { success: true, update, file };
       } catch (error) {
-        errorCount++;
-        logger.warn("Failed to process file", {
-          path: file.path,
-          error: String(error),
-        });
+        return { success: false, error: String(error), file };
+      }
+    };
+
+    // バッチ処理（同時実行数制限）
+    for (let i = 0; i < filesToProcess.length; i += PARALLEL_FILE_LIMIT) {
+      const batch = filesToProcess.slice(i, i + PARALLEL_FILE_LIMIT);
+      const results = await Promise.all(batch.map(processFile));
+
+      for (const result of results) {
+        if (result.success && "update" in result) {
+          upsertUpdate(db, result.update);
+          updatesCount++;
+        } else {
+          errorCount++;
+          logger.warn("Failed to process file", {
+            path: result.file.path,
+            error: "error" in result ? result.error : "Unknown",
+          });
+        }
       }
     }
 

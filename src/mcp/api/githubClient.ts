@@ -2,6 +2,7 @@
  * GitHub API クライアント
  *
  * Dynamics 365 Docs リポジトリから更新情報を取得
+ * 並列処理対応版
  */
 
 import type {
@@ -17,6 +18,57 @@ import * as logger from "../utils/logger.js";
 /** リトライ設定 */
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
+
+/** 並列処理設定 */
+const PARALLEL_TREE_LIMIT = 4; // ツリー取得の同時実行数
+const PARALLEL_FILE_LIMIT = 5; // ファイル処理の同時実行数
+const PARALLEL_COMMIT_LIMIT = 4; // コミット取得の同時実行数
+
+/**
+ * 並列処理用のセマフォ
+ */
+class Semaphore {
+  private queue: Array<() => void> = [];
+  private running = 0;
+
+  constructor(private limit: number) {}
+
+  async acquire(): Promise<void> {
+    if (this.running < this.limit) {
+      this.running++;
+      return;
+    }
+    await new Promise<void>((resolve) => this.queue.push(resolve));
+    this.running++;
+  }
+
+  release(): void {
+    this.running--;
+    const next = this.queue.shift();
+    if (next) next();
+  }
+}
+
+/**
+ * 並列実行ヘルパー（制限付き）
+ */
+async function parallelLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const semaphore = new Semaphore(limit);
+  return Promise.all(
+    items.map(async (item) => {
+      await semaphore.acquire();
+      try {
+        return await fn(item);
+      } finally {
+        semaphore.release();
+      }
+    }),
+  );
+}
 
 /**
  * GitHub API fetch with auth
@@ -168,7 +220,7 @@ export async function getRepositoryTree(
 }
 
 /**
- * what's-new ファイル一覧を取得
+ * what's-new ファイル一覧を取得（並列処理版）
  */
 export async function getWhatsNewFiles(token?: string): Promise<
   Array<{
@@ -180,40 +232,53 @@ export async function getWhatsNewFiles(token?: string): Promise<
     sha: string;
   }>
 > {
-  const results: Array<{
-    path: string;
-    url: string;
-    rawUrl: string;
-    product: string;
-    version: string | null;
-    sha: string;
-  }> = [];
+  logger.info("Fetching what's-new files (parallel)", {
+    repoCount: TARGET_REPOSITORIES.length,
+    parallelLimit: PARALLEL_TREE_LIMIT,
+  });
 
-  for (const repo of TARGET_REPOSITORIES) {
-    const tree = await getRepositoryTree(
-      repo.owner,
-      repo.repo,
-      repo.branch,
-      token,
-    );
+  // 各リポジトリのツリー取得を並列化
+  const repoResults = await parallelLimit(
+    TARGET_REPOSITORIES,
+    PARALLEL_TREE_LIMIT,
+    async (repo) => {
+      const tree = await getRepositoryTree(
+        repo.owner,
+        repo.repo,
+        repo.branch,
+        token,
+      );
 
-    for (const item of tree) {
-      if (item.type !== "blob") continue;
-      if (!item.path.endsWith(".md")) continue;
-      if (!item.path.startsWith(repo.basePath)) continue;
-      if (!isWhatsNewFile(item.path)) continue;
+      const files: Array<{
+        path: string;
+        url: string;
+        rawUrl: string;
+        product: string;
+        version: string | null;
+        sha: string;
+      }> = [];
 
-      results.push({
-        path: item.path,
-        url: `https://github.com/${repo.owner}/${repo.repo}/blob/${repo.branch}/${item.path}`,
-        rawUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repo.branch}/${item.path}`,
-        product: inferProduct(item.path),
-        version: extractVersion(item.path),
-        sha: item.sha,
-      });
-    }
-  }
+      for (const item of tree) {
+        if (item.type !== "blob") continue;
+        if (!item.path.endsWith(".md")) continue;
+        if (!item.path.startsWith(repo.basePath)) continue;
+        if (!isWhatsNewFile(item.path)) continue;
 
+        files.push({
+          path: item.path,
+          url: `https://github.com/${repo.owner}/${repo.repo}/blob/${repo.branch}/${item.path}`,
+          rawUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repo.branch}/${item.path}`,
+          product: inferProduct(item.path),
+          version: extractVersion(item.path),
+          sha: item.sha,
+        });
+      }
+
+      return files;
+    },
+  );
+
+  const results = repoResults.flat();
   logger.info("Found what's-new files", { count: results.length });
   return results;
 }
@@ -335,7 +400,7 @@ export async function getFileLastCommitDate(
 }
 
 /**
- * 最近変更されたファイル一覧を取得（コミット経由）
+ * 最近変更されたファイル一覧を取得（コミット経由・並列処理版）
  */
 export async function getRecentlyChangedFiles(
   since: string,
@@ -346,50 +411,83 @@ export async function getRecentlyChangedFiles(
     { date: string; sha: string; message: string }
   >();
 
-  for (const repo of TARGET_REPOSITORIES) {
-    const url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?path=${repo.basePath}&per_page=50&since=${since}`;
+  logger.info("Fetching recently changed files (parallel)", {
+    since,
+    parallelLimit: PARALLEL_COMMIT_LIMIT,
+  });
 
-    try {
-      const response = await githubFetch(url, token);
-      const commits = (await response.json()) as GitHubCommit[];
+  // 各リポジトリを並列で処理
+  const repoResults = await parallelLimit(
+    TARGET_REPOSITORIES,
+    PARALLEL_COMMIT_LIMIT,
+    async (repo) => {
+      const localChanges = new Map<
+        string,
+        { date: string; sha: string; message: string }
+      >();
 
-      for (const commit of commits) {
-        // コミットの詳細を取得（変更されたファイル一覧）
-        const detailUrl = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits/${commit.sha}`;
-        const detailResponse = await githubFetch(detailUrl, token);
-        const detail = (await detailResponse.json()) as {
-          files?: Array<{ filename: string; status: string }>;
-        };
+      const url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?path=${repo.basePath}&per_page=50&since=${since}`;
 
-        if (detail.files) {
-          for (const file of detail.files) {
-            if (
-              isWhatsNewFile(file.filename) &&
-              file.filename.endsWith(".md")
-            ) {
-              // 最新のコミット日を保持
-              const existing = changedFiles.get(file.filename);
+      try {
+        const response = await githubFetch(url, token);
+        const commits = (await response.json()) as GitHubCommit[];
+
+        // コミット詳細取得も並列化（最大5件まで）
+        const commitDetails = await parallelLimit(
+          commits.slice(0, 10),
+          PARALLEL_FILE_LIMIT,
+          async (commit) => {
+            const detailUrl = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits/${commit.sha}`;
+            const detailResponse = await githubFetch(detailUrl, token);
+            const detail = (await detailResponse.json()) as {
+              files?: Array<{ filename: string; status: string }>;
+            };
+            return { commit, detail };
+          },
+        );
+
+        for (const { commit, detail } of commitDetails) {
+          if (detail.files) {
+            for (const file of detail.files) {
               if (
-                !existing ||
-                new Date(commit.commit.author.date) > new Date(existing.date)
+                isWhatsNewFile(file.filename) &&
+                file.filename.endsWith(".md")
               ) {
-                changedFiles.set(file.filename, {
-                  date: commit.commit.author.date,
-                  sha: commit.sha,
-                  message: commit.commit.message
-                    .split("\n")[0]
-                    .substring(0, 100),
-                });
+                const existing = localChanges.get(file.filename);
+                if (
+                  !existing ||
+                  new Date(commit.commit.author.date) > new Date(existing.date)
+                ) {
+                  localChanges.set(file.filename, {
+                    date: commit.commit.author.date,
+                    sha: commit.sha,
+                    message: commit.commit.message
+                      .split("\n")[0]
+                      .substring(0, 100),
+                  });
+                }
               }
             }
           }
         }
+      } catch (error) {
+        logger.warn("Failed to get recent commits for repo", {
+          repo: repo.repo,
+          error: String(error),
+        });
       }
-    } catch (error) {
-      logger.warn("Failed to get recent commits for repo", {
-        repo: repo.repo,
-        error: String(error),
-      });
+
+      return localChanges;
+    },
+  );
+
+  // 結果をマージ
+  for (const localChanges of repoResults) {
+    for (const [filename, info] of localChanges) {
+      const existing = changedFiles.get(filename);
+      if (!existing || new Date(info.date) > new Date(existing.date)) {
+        changedFiles.set(filename, info);
+      }
     }
   }
 
@@ -398,43 +496,60 @@ export async function getRecentlyChangedFiles(
 }
 
 /**
- * 最近のコミットを取得
+ * 最近のコミットを取得（並列処理版）
  */
 export async function getRecentCommits(
   since?: string,
   token?: string,
 ): Promise<D365Commit[]> {
-  const commits: D365Commit[] = [];
+  logger.info("Fetching recent commits (parallel)", {
+    since,
+    parallelLimit: PARALLEL_COMMIT_LIMIT,
+  });
 
-  for (const repo of TARGET_REPOSITORIES) {
-    let url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?path=${repo.basePath}&per_page=100`;
-    if (since) {
-      url += `&since=${since}`;
-    }
-
-    const response = await githubFetch(url, token);
-    const data = (await response.json()) as GitHubCommit[];
-
-    for (const commit of data) {
-      // what's-new 関連のコミットのみフィルタ
-      if (
-        commit.commit.message.toLowerCase().includes("whats-new") ||
-        commit.commit.message.toLowerCase().includes("what's new") ||
-        commit.commit.message.toLowerCase().includes("release")
-      ) {
-        commits.push({
-          sha: commit.sha,
-          message: commit.commit.message.split("\n")[0].substring(0, 200),
-          author: commit.commit.author.name,
-          date: commit.commit.author.date,
-          filesChanged: commit.stats?.total ?? null,
-          additions: commit.stats?.additions ?? null,
-          deletions: commit.stats?.deletions ?? null,
-        });
+  // 各リポジトリを並列で処理
+  const repoResults = await parallelLimit(
+    TARGET_REPOSITORIES,
+    PARALLEL_COMMIT_LIMIT,
+    async (repo) => {
+      let url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?path=${repo.basePath}&per_page=100`;
+      if (since) {
+        url += `&since=${since}`;
       }
-    }
-  }
 
+      try {
+        const response = await githubFetch(url, token);
+        const data = (await response.json()) as GitHubCommit[];
+
+        return data
+          .filter((commit) => {
+            const msg = commit.commit.message.toLowerCase();
+            return (
+              msg.includes("whats-new") ||
+              msg.includes("what's new") ||
+              msg.includes("release")
+            );
+          })
+          .map((commit) => ({
+            sha: commit.sha,
+            message: commit.commit.message.split("\n")[0].substring(0, 200),
+            author: commit.commit.author.name,
+            date: commit.commit.author.date,
+            filesChanged: commit.stats?.total ?? null,
+            additions: commit.stats?.additions ?? null,
+            deletions: commit.stats?.deletions ?? null,
+          }));
+      } catch (error) {
+        logger.warn("Failed to get commits for repo", {
+          repo: repo.repo,
+          error: String(error),
+        });
+        return [];
+      }
+    },
+  );
+
+  const commits = repoResults.flat();
   logger.info("Fetched recent commits", { count: commits.length });
   return commits;
 }
