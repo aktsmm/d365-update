@@ -39,30 +39,79 @@ import { searchUpdates, getProducts } from "../database/queries.js";
  * @returns Microsoft Learn の URL
  */
 function convertToDocsUrl(fileUrl: string, locale: string): string | null {
-  // GitHub URL パターン:
+  // GitHub URL パターン（複数のベースパスに対応）:
   // https://github.com/MicrosoftDocs/dynamics-365-unified-operations-public/blob/main/articles/...
-  // https://github.com/MicrosoftDocs/dynamics-365-project-operations/blob/main/articles/...
+  // https://github.com/MicrosoftDocs/dynamics-365-mixed-reality/blob/main/mr-docs/...
 
-  const match = fileUrl.match(
-    /github\.com\/MicrosoftDocs\/([^/]+)\/blob\/main\/articles\/(.+)\.md$/,
-  );
-  if (!match) return null;
-
-  const [, repo, path] = match;
-
-  // リポジトリ別のドキュメントベース URL マッピング
-  const repoToDocsBase: Record<string, string> = {
-    "dynamics-365-unified-operations-public": "dynamics365/unified-operations",
-    "dynamics-365-project-operations": "dynamics365/project-operations",
-    "dynamics365smb-docs": "dynamics365/business-central",
+  // リポジトリ別のドキュメント設定（ベースパス、MS Learn プレフィックス）
+  const repoConfig: Record<
+    string,
+    { basePath: string; docsBase: string; pathPrefix?: string }
+  > = {
+    // Finance & Operations 系
+    "dynamics-365-unified-operations-public": {
+      basePath: "articles",
+      docsBase: "dynamics365/unified-operations",
+    },
+    // Project Operations
+    "dynamics-365-project-operations": {
+      basePath: "articles",
+      docsBase: "dynamics365/project-operations",
+    },
+    // Business Central
+    "dynamics365smb-docs": {
+      basePath: "business-central",
+      docsBase: "dynamics365/business-central",
+    },
+    "dynamics365smb-devitpro-pb": {
+      basePath: "dev-itpro",
+      docsBase: "dynamics365/business-central/dev-itpro",
+    },
+    // Mixed Reality (Remote Assist, Guides)
+    "dynamics-365-mixed-reality": {
+      basePath: "mr-docs",
+      docsBase: "dynamics365",
+      pathPrefix: "", // mr-docs/remote-assist → dynamics365/remote-assist
+    },
+    // Fraud Protection
+    "dynamics-365-fraud-protection": {
+      basePath: "content",
+      docsBase: "dynamics365/fraud-protection",
+    },
+    // Contact Center
+    "dynamics-365-contact-center": {
+      basePath: "contact-center",
+      docsBase: "dynamics365/contact-center",
+    },
+    // Customer Engagement
+    "dynamics-365-customer-engagement": {
+      basePath: "ce",
+      docsBase: "dynamics365/customerengagement",
+    },
+    // Guidance
+    "dynamics365-guidance": {
+      basePath: "guidance",
+      docsBase: "dynamics365/guidance",
+    },
   };
 
-  const docsBase = repoToDocsBase[repo];
-  if (!docsBase) return null;
+  // リポジトリ名を抽出
+  const repoMatch = fileUrl.match(
+    /github\.com\/MicrosoftDocs\/([^/]+)\/blob\/main\/(.+)\.md$/,
+  );
+  if (!repoMatch) return null;
 
-  // パスから言語固有のセグメントを除去し、URL を構築
-  // articles/finance/whats-new/whats-new-*.md → /dynamics365/unified-operations/finance/whats-new/whats-new-*
-  return `https://learn.microsoft.com/${locale}/${docsBase}/${path}`;
+  const [, repo, fullPath] = repoMatch;
+  const config = repoConfig[repo];
+  if (!config) return null;
+
+  // ベースパスを除去してドキュメントパスを取得
+  if (!fullPath.startsWith(config.basePath + "/")) return null;
+  const docPath = fullPath.substring(config.basePath.length + 1);
+
+  // URL を構築
+  const prefix = config.pathPrefix !== undefined ? config.pathPrefix : "";
+  return `https://learn.microsoft.com/${locale}/${config.docsBase}/${prefix}${docPath}`;
 }
 
 /**

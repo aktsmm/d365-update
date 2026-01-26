@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.8] - 2026-01-26
+
+### Fixed
+
+- 🔗 **MS Learn URL 生成の改善**: より多くのリポジトリに対応
+  - `dynamics-365-mixed-reality` (Remote Assist, Guides) → MS Learn URL 生成対応
+  - `dynamics-365-fraud-protection` → MS Learn URL 生成対応
+  - `dynamics-365-contact-center` → MS Learn URL 生成対応
+  - `dynamics-365-customer-engagement` → MS Learn URL 生成対応
+  - `dynamics365-guidance` → MS Learn URL 生成対応
+  - `dynamics365smb-devitpro-pb` (Business Central DevItPro) → MS Learn URL 生成対応
+- 📁 各リポジトリのベースパス（`articles/`, `mr-docs/`, `content/` 等）に対応
+
 ## [0.2.7] - 2026-01-26
 
 ### Added
