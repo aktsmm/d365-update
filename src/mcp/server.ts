@@ -48,10 +48,7 @@ When presenting results, you MUST:
 **Product**: [product] | **Date**: [releaseDate or commitDate]  
 **Summary**: [summary translated to user's language]
 
-| Link | URL |
-|------|-----|
-| MS Learn (日本語) | [link](docsUrl_ja) |
-| GitHub Commits | [link](githubCommitsUrl) |
+🔗 [MS Learn (日本語)](docsUrl_ja) | [GitHub Commits](githubCommitsUrl)
 
 IMPORTANT: If user writes in Japanese, set locale='ja-jp' for Japanese MS Learn URLs.`,
     searchD365UpdatesSchema.shape,

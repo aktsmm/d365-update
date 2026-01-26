@@ -2,7 +2,7 @@
   "name": "d365-update",
   "displayName": "D365 UPDATE MCP",
   "description": "Search and retrieve Dynamics 365 update information from GitHub Docs via Copilot Chat",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "publisher": "yamapan",
   "license": "CC-BY-NC-4.0",
   "repository": {

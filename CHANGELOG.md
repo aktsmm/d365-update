@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 2026-01-26
+
+### Changed
+
+- 📝 出力フォーマットを改善
+  - リンク表示を表形式からインライン形式に変更（よりコンパクトに）
+  - 概要の文字数を300文字→600文字に拡大
+  - 箇条書きの抽出件数を3つ→5つに拡大
+
 ## [0.2.5] - 2026-01-26
 
 ### Fixed
