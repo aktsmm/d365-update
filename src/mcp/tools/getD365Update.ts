@@ -18,6 +18,42 @@ export const getD365UpdateSchema = z.object({
 export type GetD365UpdateInput = z.infer<typeof getD365UpdateSchema>;
 
 /**
+ * 参考 URL を生成
+ */
+function generateReferenceUrls(
+  title: string,
+  product: string,
+  version?: string | null,
+): {
+  learnSearchUrl: string;
+  learnSearchUrlJa: string;
+  productDocsUrl: string;
+} {
+  // 製品名からドキュメントパスを推測
+  const productPath = product.toLowerCase().includes("finance")
+    ? "dynamics365/finance"
+    : product.toLowerCase().includes("supply chain")
+      ? "dynamics365/supply-chain"
+      : product.toLowerCase().includes("commerce")
+        ? "dynamics365/commerce"
+        : product.toLowerCase().includes("human resources")
+          ? "dynamics365/human-resources"
+          : product.toLowerCase().includes("business central")
+            ? "dynamics365/business-central"
+            : "dynamics365";
+
+  const searchTerms = encodeURIComponent(
+    `${product} ${version || ""} what's new`,
+  );
+
+  return {
+    learnSearchUrl: `https://learn.microsoft.com/en-us/search/?terms=${searchTerms}`,
+    learnSearchUrlJa: `https://learn.microsoft.com/ja-jp/search/?terms=${searchTerms}`,
+    productDocsUrl: `https://learn.microsoft.com/ja-jp/${productPath}/get-started/whats-new-home-page`,
+  };
+}
+
+/**
  * ツール実行
  */
 export async function executeGetD365Update(
@@ -34,6 +70,13 @@ export async function executeGetD365Update(
     });
   }
 
+  // 参考 URL を生成
+  const urls = generateReferenceUrls(
+    update.title,
+    update.product,
+    update.version,
+  );
+
   return JSON.stringify(
     {
       id: update.id,
@@ -45,8 +88,15 @@ export async function executeGetD365Update(
       previewDate: update.previewDate,
       gaDate: update.gaDate,
       lastCommitDate: update.commitDate,
-      fileUrl: update.fileUrl,
+      // ソースファイル
+      sourceUrl: update.fileUrl,
       rawContentUrl: update.rawContentUrl,
+      // 参考リンク
+      references: {
+        learnSearchUrl: urls.learnSearchUrlJa,
+        learnSearchUrlEn: urls.learnSearchUrl,
+        productDocsUrl: urls.productDocsUrl,
+      },
     },
     null,
     2,

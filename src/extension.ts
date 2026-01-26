@@ -3,13 +3,145 @@
  */
 
 import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 // バージョン情報
 const VERSION = "0.1.0";
 const EXTENSION_NAME = "D365 UPDATE MCP";
+const MCP_SERVER_NAME = "d365-update";
+
+/**
+ * MCP 設定ファイルに d365-update サーバーを登録
+ */
+async function registerMcpServer(
+  context: vscode.ExtensionContext,
+): Promise<void> {
+  console.log("registerMcpServer called");
+
+  // OS に応じた mcp.json パスを決定
+  let mcpJsonPath: string;
+  if (process.platform === "win32") {
+    mcpJsonPath = path.join(
+      os.homedir(),
+      "AppData",
+      "Roaming",
+      "Code",
+      "User",
+      "mcp.json",
+    );
+  } else if (process.platform === "darwin") {
+    mcpJsonPath = path.join(
+      os.homedir(),
+      "Library",
+      "Application Support",
+      "Code",
+      "User",
+      "mcp.json",
+    );
+  } else {
+    mcpJsonPath = path.join(
+      os.homedir(),
+      ".config",
+      "Code",
+      "User",
+      "mcp.json",
+    );
+  }
+
+  // 拡張機能の MCP サーバーパス（スラッシュに統一）
+  const mcpServerPath = path
+    .join(context.extensionPath, "dist", "mcp", "index.js")
+    .replace(/\\/g, "/");
+
+  try {
+    let mcpConfig: { servers?: Record<string, unknown>; inputs?: unknown[] } = {
+      servers: {},
+      inputs: [],
+    };
+
+    // 既存の mcp.json を読み込み
+    if (fs.existsSync(mcpJsonPath)) {
+      let content = fs.readFileSync(mcpJsonPath, "utf-8");
+      // 末尾カンマを除去
+      content = content.replace(/,(\s*[}\]])/g, "$1");
+      try {
+        mcpConfig = JSON.parse(content);
+      } catch (parseError) {
+        console.error("Failed to parse mcp.json:", parseError);
+        mcpConfig = { servers: {}, inputs: [] };
+      }
+    }
+
+    // servers がなければ作成
+    if (!mcpConfig.servers) {
+      mcpConfig.servers = {};
+    }
+
+    // d365-update が既に登録されているか確認
+    const existingConfig = mcpConfig.servers[MCP_SERVER_NAME] as
+      | { args?: string[] }
+      | undefined;
+    const currentPath = existingConfig?.args?.[0];
+
+    // パスが異なる場合（バージョンアップなど）のみ更新
+    if (currentPath !== mcpServerPath) {
+      console.log("Registering MCP server...");
+      console.log("mcp.json path:", mcpJsonPath);
+      console.log("MCP server path:", mcpServerPath);
+
+      mcpConfig.servers[MCP_SERVER_NAME] = {
+        command: "node",
+        args: [mcpServerPath],
+        type: "stdio",
+      };
+
+      // ディレクトリが存在しない場合は作成
+      const mcpJsonDir = path.dirname(mcpJsonPath);
+      if (!fs.existsSync(mcpJsonDir)) {
+        fs.mkdirSync(mcpJsonDir, { recursive: true });
+      }
+
+      fs.writeFileSync(
+        mcpJsonPath,
+        JSON.stringify(mcpConfig, null, 2),
+        "utf-8",
+      );
+
+      console.log("MCP server registered successfully");
+
+      if (!currentPath) {
+        vscode.window.showInformationMessage(
+          `${EXTENSION_NAME}: MCP サーバーを登録しました。VS Code を再読み込みしてください。`,
+        );
+      } else {
+        vscode.window.showInformationMessage(
+          `${EXTENSION_NAME}: MCP サーバーのパスを更新しました。VS Code を再読み込みしてください。`,
+        );
+      }
+    } else {
+      console.log("MCP server already registered with correct path");
+    }
+  } catch (error) {
+    console.error("Failed to register MCP server:", error);
+    vscode.window.showErrorMessage(
+      `${EXTENSION_NAME}: MCP サーバーの登録に失敗しました: ${error}`,
+    );
+  }
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   console.log(`${EXTENSION_NAME} v${VERSION} activated`);
+  console.log("Extension path:", context.extensionPath);
+
+  // MCP サーバーを mcp.json に登録
+  registerMcpServer(context).catch((error) => {
+    console.error("Failed to register MCP server:", error);
+    vscode.window.showErrorMessage(
+      `${EXTENSION_NAME}: MCP サーバーの登録に失敗しました: ${error}`,
+    );
+  });
 
   // 起動時に Token 設定をチェック
   checkGitHubTokenConfig();

@@ -119,7 +119,8 @@ export async function executeSearchD365Updates(
       releaseDate: update.releaseDate,
       commitDate: update.commitDate,
       summary,
-      fileUrl: update.fileUrl,
+      // GitHub ソースへの直リンク
+      sourceUrl: update.fileUrl,
     };
   });
 
@@ -134,7 +135,7 @@ export async function executeSearchD365Updates(
       dateRange,
       results: formattedResults,
       availableProducts: products,
-      tip: "Use get_d365_update with an ID to get full details including the complete description.",
+      tip: "Use get_d365_update with an ID to get full details including the complete description and reference URLs.",
     },
     null,
     2,
