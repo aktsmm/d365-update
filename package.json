@@ -2,7 +2,7 @@
   "name": "d365-update",
   "displayName": "D365 UPDATE MCP",
   "description": "Search and retrieve Dynamics 365 update information from GitHub Docs via Copilot Chat",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "yamapan",
   "license": "CC-BY-NC-4.0",
   "repository": {
@@ -96,7 +96,12 @@
         "name": "d365update_search",
         "displayName": "D365 Update Search",
         "description": "Search for Dynamics 365 update information from GitHub Docs. Use this when users ask about D365 Finance, SCM, Commerce, HR, Business Central updates, new features, or what's new.",
-        "tags": ["dynamics365", "d365", "updates", "whats-new"],
+        "tags": [
+          "dynamics365",
+          "d365",
+          "updates",
+          "whats-new"
+        ],
         "modelDescription": "Search for Dynamics 365 update information including Finance, SCM, Commerce, HR, and Business Central. Supports queries by version (e.g., 10.0.41), product name, date range, and keywords. Returns update titles, descriptions, versions, and URLs.",
         "inputSchema": {
           "type": "object",
@@ -120,7 +125,10 @@
         "name": "d365update_sync",
         "displayName": "D365 Update Sync",
         "description": "Sync D365 update data from GitHub repositories. Call this to refresh the local database.",
-        "tags": ["dynamics365", "sync"],
+        "tags": [
+          "dynamics365",
+          "sync"
+        ],
         "modelDescription": "Synchronize D365 update data from 16 GitHub repositories. Uses incremental sync to only fetch changed files.",
         "inputSchema": {
           "type": "object",
