@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3] - 2026-01-27
+
+### Changed
+
+- 📝 **README 更新**: 技術的な工夫（同梱DB、差分同期、並列処理）を追記
+
 ## [0.3.2] - 2026-01-27
 
 ### Added
