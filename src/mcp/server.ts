@@ -31,23 +31,29 @@ export function createServer(): McpServer {
   // search_d365_updates ツール
   server.tool(
     "search_d365_updates",
-    `Search Dynamics 365 update information from GitHub Docs. Returns lightweight metadata. Supports full-text search, product/version/date filters, and pagination. Use get_d365_update to retrieve full details. IMPORTANT: If user writes in Japanese, set locale='ja-jp' to return Japanese Microsoft Learn URLs. ALWAYS translate the title and summary to the user's language when presenting results (e.g., translate to Japanese if user asks in Japanese).
+    `Search Dynamics 365 update information from GitHub Docs. Returns metadata with summary. Supports full-text search, product/version/date filters, and pagination.
 
-## Output Format Instructions for GitHub Copilot
+## CRITICAL: Output Instructions for GitHub Copilot
 
-When presenting results to the user, ALWAYS format as follows:
+When presenting results, you MUST:
 
-1. **Summary Table**: Show count, date range, and counts by product
-2. **Full Results Table** with ALL of the following columns:
-   - Release Date (リリース日)
-   - Product (製品)
-   - Title - TRANSLATED to user's language (タイトル - 翻訳)
-   - Summary - TRANSLATED to user's language (概要 - 翻訳)
-   - Japanese Docs URL (docsUrl_ja) - as clickable link [日本語](url)
-   - English Docs URL (docsUrl_en) - as clickable link [英語](url)
-   - GitHub Commits URL (githubCommitsUrl) - as clickable link [Commits](url)
+1. **Translate**: title and summary to user's language (Japanese if asked in Japanese)
+2. **Show ALL results**: Never truncate or summarize with "...and N more"
+3. **Include all URLs**: docsUrl_ja, docsUrl_en, githubCommitsUrl as clickable links
+4. **No additional tool call needed**: This search result is complete - do NOT call get_d365_update unless user asks for specific item details
 
-CRITICAL: Always translate title and summary to the user's language. Never omit URLs.`,
+## Recommended Output Format (Markdown):
+
+### [Number]. [Title in User's Language]
+**Product**: [product] | **Date**: [releaseDate or commitDate]  
+**Summary**: [summary translated to user's language]
+
+| Link | URL |
+|------|-----|
+| MS Learn (日本語) | [link](docsUrl_ja) |
+| GitHub Commits | [link](githubCommitsUrl) |
+
+IMPORTANT: If user writes in Japanese, set locale='ja-jp' for Japanese MS Learn URLs.`,
     searchD365UpdatesSchema.shape,
     async (input) => {
       try {

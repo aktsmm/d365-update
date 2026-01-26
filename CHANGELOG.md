@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2026-01-26
+
+### Changed
+
+- 🎯 `search_d365_updates` の出力を改善
+  - 追加の `get_d365_update` 呼び出し不要で検索結果が完結するように変更
+  - 「新リリース」「ドキュメント更新」の重複分類を廃止し、全件一覧に統合
+  - 出力指示を強化: 全件表示・翻訳必須・省略禁止を明記
+  - ツール description にマークダウン出力テンプレートを追加
+
 ## [0.2.3] - 2026-01-26
 
 ### Changed

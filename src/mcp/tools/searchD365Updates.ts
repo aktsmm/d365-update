@@ -3,22 +3,27 @@
  *
  * Dynamics 365 アップデート情報を検索
  *
- * ## GitHub Copilot への出力指示
+ * ## GitHub Copilot への出力指示（重要）
  *
- * このツールの結果を表示する際は、以下の形式で出力すること：
+ * このツールの結果を表示する際は、**全件を省略せず**以下の形式で出力すること：
  *
- * 1. **サマリ**: 件数、期間、製品別件数を表形式で表示
- * 2. **全件一覧**: 以下の列を含む表形式で全件表示
- *    - リリース日
- *    - 製品
- *    - タイトル（日本語に翻訳）
- *    - 概要（日本語に翻訳）
- *    - 日本語ドキュメントURL（docsUrl_ja）
- *    - 英語ドキュメントURL（docsUrl_en）
- *    - GitHubコミット履歴URL（githubCommitsUrl）
+ * ### 各アップデートの表示形式（Markdown）:
+ * ```
+ * ### [番号]. [タイトル（日本語訳）]
+ * **製品**: [製品名]
+ * **概要**: [概要を日本語で]
  *
- * **重要**: タイトルと概要は必ずユーザーの言語（日本語の場合は日本語）に翻訳して表示すること。
- * URLは省略せず、すべてリンクとして出力すること。
+ * | リンク | URL |
+ * |--------|-----|
+ * | MS Learn (日本語) | [docsUrl_ja] |
+ * | GitHub Commits | [githubCommitsUrl] |
+ * ```
+ *
+ * **重要ルール**:
+ * 1. title と summary は必ずユーザーの言語（日本語）に翻訳して表示
+ * 2. 全件を省略せず表示（「...他N件」のような省略は禁止）
+ * 3. URLはすべてクリック可能なリンクとして出力
+ * 4. get_d365_update を追加で呼ぶ必要はない（この検索結果で完結）
  */
 
 import { z } from "zod";
@@ -205,26 +210,11 @@ export async function executeSearchD365Updates(
 
   // サマリ情報を生成
   const productCounts: Record<string, number> = {};
-  const newReleases: typeof formattedResults = [];
-  const docUpdates: typeof formattedResults = [];
 
   for (const r of formattedResults) {
     // 製品別カウント
     const prod = r.product || "Unknown";
     productCounts[prod] = (productCounts[prod] || 0) + 1;
-
-    // 新リリース vs ドキュメント更新を分類
-    // タイトルに現在年または前年が含まれていれば新リリース扱い
-    const currentYear = new Date().getFullYear();
-    const titleHasRecentYear =
-      r.title.includes(String(currentYear)) ||
-      r.title.includes(String(currentYear - 1));
-
-    if (titleHasRecentYear && r.title.toLowerCase().includes("what's new")) {
-      newReleases.push(r);
-    } else {
-      docUpdates.push(r);
-    }
   }
 
   // 言語に応じたメッセージ
@@ -234,53 +224,43 @@ export async function executeSearchD365Updates(
         totalResults: "件数",
         period: "期間",
         byProduct: "製品別",
-        newReleases: "🆕 新機能リリース",
-        docUpdates: "📝 ドキュメント更新",
-        allResults: "📋 全件一覧",
-        tip: "💡 詳細を見るには get_d365_update で ID を指定してください",
+        allResults: "📋 全件一覧（以下をすべて日本語に翻訳して表示）",
         availableProducts: "利用可能な製品フィルタ",
+        outputInstruction:
+          "⚠️ 出力指示: title と summary を日本語に翻訳し、全件を省略せず表示してください",
       }
     : {
         summary: "📊 Summary",
         totalResults: "Total Results",
         period: "Period",
         byProduct: "By Product",
-        newReleases: "🆕 New Releases",
-        docUpdates: "📝 Documentation Updates",
         allResults: "📋 All Results",
-        tip: "💡 Use get_d365_update with an ID to get full details",
         availableProducts: "Available Product Filters",
+        outputInstruction:
+          "⚠️ Output Instruction: Display all results without truncation",
       };
 
   return JSON.stringify(
     {
+      [messages.outputInstruction]: true,
       [messages.summary]: {
         [messages.totalResults]: results.length,
         [messages.period]: dateRange,
         [messages.byProduct]: productCounts,
       },
-      [messages.newReleases]: newReleases.map((r) => ({
+      [messages.allResults]: formattedResults.map((r) => ({
         id: r.id,
         title: r.title,
         product: r.product,
         version: r.version,
         releaseDate: r.releaseDate,
-        docsUrl_ja: r.docsUrl_ja,
-        docsUrl_en: r.docsUrl_en,
-        githubCommitsUrl: r.githubCommitsUrl,
-      })),
-      [messages.docUpdates]: docUpdates.map((r) => ({
-        id: r.id,
-        title: r.title,
-        product: r.product,
         commitDate: r.commitDate,
+        summary: r.summary,
         docsUrl_ja: r.docsUrl_ja,
         docsUrl_en: r.docsUrl_en,
         githubCommitsUrl: r.githubCommitsUrl,
       })),
-      [messages.allResults]: formattedResults,
       [messages.availableProducts]: products,
-      [messages.tip]: "",
     },
     null,
     2,
