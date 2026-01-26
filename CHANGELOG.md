@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2026-01-26
+
+### Fixed
+
+- 🔑 GitHub Token が mcp.json 経由で MCP Server に渡されない問題を修正
+  - 拡張機能が VS Code 設定から Token を読み取り mcp.json の env に書き込むように変更
+  - Token 設定変更時に自動で mcp.json を更新するリスナーを追加
+- 📅 日付フィルタが正しく動作しない問題を修正
+  - `release_date` (MM/DD/YYYY 形式) を YYYY-MM-DD に変換して比較するように修正
+  - ソート順も同様に修正
+
+### Added
+
+- 🔍 起動時に GitHub Token の有無をログ出力（デバッグ用）
+
 ## [0.2.1] - 2026-01-26
 
 ### Added

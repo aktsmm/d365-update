@@ -11,6 +11,13 @@ import * as logger from "./utils/logger.js";
 async function main(): Promise<void> {
   logger.info("Starting D365 Update MCP Server");
 
+  // 環境変数からトークン確認（デバッグ用）
+  const hasGitHubToken = !!process.env.GITHUB_TOKEN;
+  const hasD365Token = !!process.env.D365_UPDATE_GITHUB_TOKEN;
+  logger.info(
+    `GitHub Token status: GITHUB_TOKEN=${hasGitHubToken}, D365_UPDATE_GITHUB_TOKEN=${hasD365Token}`,
+  );
+
   // データベース初期化
   try {
     getDatabase();

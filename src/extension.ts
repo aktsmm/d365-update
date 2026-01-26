@@ -79,22 +79,32 @@ async function registerMcpServer(
       mcpConfig.servers = {};
     }
 
+    // VS Code 設定から GitHub Token を取得
+    const config = vscode.workspace.getConfiguration("d365Update");
+    const githubToken = config.get<string>("githubToken") || "";
+
     // d365-update が既に登録されているか確認
     const existingConfig = mcpConfig.servers[MCP_SERVER_NAME] as
-      | { args?: string[] }
+      | { args?: string[]; env?: Record<string, string> }
       | undefined;
     const currentPath = existingConfig?.args?.[0];
+    const currentToken = existingConfig?.env?.GITHUB_TOKEN || "";
 
-    // パスが異なる場合（バージョンアップなど）のみ更新
-    if (currentPath !== mcpServerPath) {
+    // パスまたはトークンが異なる場合に更新
+    if (currentPath !== mcpServerPath || currentToken !== githubToken) {
       console.log("Registering MCP server...");
       console.log("mcp.json path:", mcpJsonPath);
       console.log("MCP server path:", mcpServerPath);
+      console.log("GitHub Token configured:", !!githubToken);
 
       mcpConfig.servers[MCP_SERVER_NAME] = {
         command: "node",
         args: [mcpServerPath],
         type: "stdio",
+        env: {
+          GITHUB_TOKEN: githubToken,
+          D365_UPDATE_GITHUB_TOKEN: githubToken,
+        },
       };
 
       // ディレクトリが存在しない場合は作成
@@ -142,6 +152,21 @@ export function activate(context: vscode.ExtensionContext): void {
       `${EXTENSION_NAME}: MCP サーバーの登録に失敗しました: ${error}`,
     );
   });
+
+  // 設定変更時に mcp.json を更新
+  const configChangeListener = vscode.workspace.onDidChangeConfiguration(
+    (e) => {
+      if (e.affectsConfiguration("d365Update.githubToken")) {
+        console.log("GitHub Token configuration changed, updating mcp.json...");
+        registerMcpServer(context).then(() => {
+          vscode.window.showInformationMessage(
+            `${EXTENSION_NAME}: GitHub Token を更新しました。VS Code を再読み込みしてください。`,
+          );
+        });
+      }
+    },
+  );
+  context.subscriptions.push(configChangeListener);
 
   // 起動時に Token 設定をチェック
   checkGitHubTokenConfig();

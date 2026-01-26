@@ -212,13 +212,23 @@ export function searchUpdates(
     params.push(`%${filters.version}%`);
   }
 
-  // 日付フィルタ (release_date または commit_date を使用)
+  // 日付フィルタ
+  // release_date は MM/DD/YYYY 形式、commit_date は ISO 8601 形式
+  // SQLite で release_date を YYYY-MM-DD に変換して比較
   if (filters.dateFrom) {
-    conditions.push("(d.release_date >= ? OR d.commit_date >= ?)");
+    conditions.push(`(
+      (d.release_date IS NOT NULL AND 
+       substr(d.release_date, 7, 4) || '-' || substr(d.release_date, 1, 2) || '-' || substr(d.release_date, 4, 2) >= ?) 
+      OR (d.commit_date IS NOT NULL AND d.commit_date >= ?)
+    )`);
     params.push(filters.dateFrom, filters.dateFrom);
   }
   if (filters.dateTo) {
-    conditions.push("(d.release_date <= ? OR d.commit_date <= ?)");
+    conditions.push(`(
+      (d.release_date IS NOT NULL AND 
+       substr(d.release_date, 7, 4) || '-' || substr(d.release_date, 1, 2) || '-' || substr(d.release_date, 4, 2) <= ?) 
+      OR (d.commit_date IS NOT NULL AND d.commit_date <= ?)
+    )`);
     params.push(filters.dateTo, filters.dateTo);
   }
 
@@ -226,8 +236,13 @@ export function searchUpdates(
     sql += (filters.query ? " AND " : " WHERE ") + conditions.join(" AND ");
   }
 
-  // ソート (release_date 優先、なければ commit_date)
-  sql += " ORDER BY COALESCE(d.release_date, d.commit_date) DESC NULLS LAST";
+  // ソート (release_date を YYYY-MM-DD に変換してソート、なければ commit_date)
+  sql += ` ORDER BY COALESCE(
+    CASE WHEN d.release_date IS NOT NULL 
+      THEN substr(d.release_date, 7, 4) || '-' || substr(d.release_date, 1, 2) || '-' || substr(d.release_date, 4, 2)
+      ELSE NULL END,
+    d.commit_date
+  ) DESC NULLS LAST`;
 
   // リミット（指定がなければ全件）
   if (filters.limit !== undefined) {

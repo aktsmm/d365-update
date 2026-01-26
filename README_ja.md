@@ -39,6 +39,10 @@
 3. VS Code を再読み込み
 4. Copilot Chat のツール一覧に自動で表示されます！ 🎉
 
+### ⏳ 初回利用時の注意
+
+初回利用時は GitHub からのデータ同期が自動実行されます。ネットワーク速度により **1〜2分** かかる場合があります。2回目以降はローカルキャッシュにより即座に利用できます。
+
 ### GitHub Token の設定（推奨）
 
 GitHub API にはレート制限があります。Token を設定すると大幅に緩和されます:
@@ -95,8 +99,8 @@ Copilot Chat でこのように聞いてください:
 | `version`  | string | バージョンでフィルタ（例: `10.0.41`）        |
 | `dateFrom` | string | 日付範囲の開始（`YYYY-MM-DD`）               |
 | `dateTo`   | string | 日付範囲の終了（`YYYY-MM-DD`）               |
-| `locale`   | string | URL の言語（例: `ja-jp`, `en-us`）自動検出 |
-| `limit`    | number | 最大結果数（デフォルト: 全件）              |
+| `locale`   | string | URL の言語（例: `ja-jp`, `en-us`）自動検出   |
+| `limit`    | number | 最大結果数（デフォルト: 全件）               |
 
 ### レスポンス例
 

@@ -39,6 +39,10 @@
 3. Reload VS Code
 4. The tool automatically appears in Copilot Chat's tool list! 🎉
 
+### ⏳ First-Time Use
+
+On first use, data synchronization from GitHub runs automatically. This may take **1-2 minutes** depending on your network speed. Subsequent uses are instant thanks to local caching.
+
 ### GitHub Token Setup (Recommended)
 
 GitHub API has rate limits. Setting a token increases the limit significantly:
@@ -88,15 +92,15 @@ Ask Copilot Chat like this:
 
 ### search_d365_updates Parameters
 
-| Parameter  | Type   | Description                                              |
-| ---------- | ------ | -------------------------------------------------------- |
-| `query`    | string | Search keyword (full-text search on title & description) |
-| `product`  | string | Filter by product (e.g., `Dynamics 365 Finance`)         |
-| `version`  | string | Filter by version (e.g., `10.0.41`)                      |
-| `dateFrom` | string | Date range start (`YYYY-MM-DD`)                          |
-| `dateTo`   | string | Date range end (`YYYY-MM-DD`)                            |
+| Parameter  | Type   | Description                                               |
+| ---------- | ------ | --------------------------------------------------------- |
+| `query`    | string | Search keyword (full-text search on title & description)  |
+| `product`  | string | Filter by product (e.g., `Dynamics 365 Finance`)          |
+| `version`  | string | Filter by version (e.g., `10.0.41`)                       |
+| `dateFrom` | string | Date range start (`YYYY-MM-DD`)                           |
+| `dateTo`   | string | Date range end (`YYYY-MM-DD`)                             |
 | `locale`   | string | Language for URLs (e.g., `ja-jp`, `en-us`). Auto-detected |
-| `limit`    | number | Max results (default: all matching results)              |
+| `limit`    | number | Max results (default: all matching results)               |
 
 ### Response Example
 
