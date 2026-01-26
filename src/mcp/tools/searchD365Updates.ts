@@ -151,9 +151,9 @@ export async function executeSearchD365Updates(
       }
     }
 
-    // ロケール（デフォルト: en-us）
-    const locale = input.locale || "en-us";
-    const docsUrl = convertToDocsUrl(update.fileUrl, locale);
+    // MS Learn URL を日本語・英語両方生成
+    const docsUrlJa = convertToDocsUrl(update.fileUrl, "ja-jp");
+    const docsUrlEn = convertToDocsUrl(update.fileUrl, "en-us");
 
     // GitHub コミット履歴リンクを生成
     // fileUrl: https://github.com/MicrosoftDocs/dynamics-365-unified-operations-public/blob/main/articles/...
@@ -168,8 +168,9 @@ export async function executeSearchD365Updates(
       releaseDate: update.releaseDate,
       commitDate: update.commitDate,
       summary,
-      // Microsoft Learn Docs URL（言語対応）
-      docsUrl,
+      // Microsoft Learn Docs URL（日本語・英語両方）
+      docsUrl_ja: docsUrlJa,
+      docsUrl_en: docsUrlEn,
       // GitHub ソース・コミット履歴
       githubUrl: update.fileUrl,
       githubCommitsUrl: commitsUrl,
@@ -181,13 +182,88 @@ export async function executeSearchD365Updates(
     ? `${dateFrom} ~ ${input.dateTo || "now"}`
     : "all time";
 
+  // ロケール（デフォルト: en-us）
+  const locale = input.locale || "en-us";
+  const isJapanese = locale.startsWith("ja");
+
+  // サマリ情報を生成
+  const productCounts: Record<string, number> = {};
+  const newReleases: typeof formattedResults = [];
+  const docUpdates: typeof formattedResults = [];
+
+  for (const r of formattedResults) {
+    // 製品別カウント
+    const prod = r.product || "Unknown";
+    productCounts[prod] = (productCounts[prod] || 0) + 1;
+
+    // 新リリース vs ドキュメント更新を分類
+    // タイトルに現在年または前年が含まれていれば新リリース扱い
+    const currentYear = new Date().getFullYear();
+    const titleHasRecentYear =
+      r.title.includes(String(currentYear)) ||
+      r.title.includes(String(currentYear - 1));
+
+    if (titleHasRecentYear && r.title.toLowerCase().includes("what's new")) {
+      newReleases.push(r);
+    } else {
+      docUpdates.push(r);
+    }
+  }
+
+  // 言語に応じたメッセージ
+  const messages = isJapanese
+    ? {
+        summary: "📊 サマリ",
+        totalResults: "件数",
+        period: "期間",
+        byProduct: "製品別",
+        newReleases: "🆕 新機能リリース",
+        docUpdates: "📝 ドキュメント更新",
+        allResults: "📋 全件一覧",
+        tip: "💡 詳細を見るには get_d365_update で ID を指定してください",
+        availableProducts: "利用可能な製品フィルタ",
+      }
+    : {
+        summary: "📊 Summary",
+        totalResults: "Total Results",
+        period: "Period",
+        byProduct: "By Product",
+        newReleases: "🆕 New Releases",
+        docUpdates: "📝 Documentation Updates",
+        allResults: "📋 All Results",
+        tip: "💡 Use get_d365_update with an ID to get full details",
+        availableProducts: "Available Product Filters",
+      };
+
   return JSON.stringify(
     {
-      totalResults: results.length,
-      dateRange,
-      results: formattedResults,
-      availableProducts: products,
-      tip: "Use get_d365_update with an ID to get full details including the complete description and reference URLs.",
+      [messages.summary]: {
+        [messages.totalResults]: results.length,
+        [messages.period]: dateRange,
+        [messages.byProduct]: productCounts,
+      },
+      [messages.newReleases]: newReleases.map((r) => ({
+        id: r.id,
+        title: r.title,
+        product: r.product,
+        version: r.version,
+        releaseDate: r.releaseDate,
+        docsUrl_ja: r.docsUrl_ja,
+        docsUrl_en: r.docsUrl_en,
+        githubCommitsUrl: r.githubCommitsUrl,
+      })),
+      [messages.docUpdates]: docUpdates.map((r) => ({
+        id: r.id,
+        title: r.title,
+        product: r.product,
+        commitDate: r.commitDate,
+        docsUrl_ja: r.docsUrl_ja,
+        docsUrl_en: r.docsUrl_en,
+        githubCommitsUrl: r.githubCommitsUrl,
+      })),
+      [messages.allResults]: formattedResults,
+      [messages.availableProducts]: products,
+      [messages.tip]: "",
     },
     null,
     2,

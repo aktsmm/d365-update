@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-01-26
+
+### Added
+
+- 🌐 MS Learn URL を日本語・英語両方で出力 (`docsUrl_ja`, `docsUrl_en`)
+- 📊 サマリセクション追加: 件数、期間、製品別カウントを表示
+- 🆕 新機能リリース vs ドキュメント更新を自動分類
+
+### Fixed
+
+- 🔗 `githubCommitsUrl` がサマリ出力に含まれていなかった問題を修正
+
+### Changed
+
+- 🌏 ロケールに関係なく日本語・英語両方の Docs URL を常に出力
+- 📤 出力ラベルがロケールに応じて日本語/英語に切り替わるように変更
+
 ## [0.2.0] - 2026-01-26
 
 ### Added
