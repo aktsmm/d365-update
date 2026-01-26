@@ -2,7 +2,7 @@
   "name": "d365-update",
   "displayName": "D365 UPDATE MCP",
   "description": "Search and retrieve Dynamics 365 update information from GitHub Docs via Copilot Chat",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "publisher": "yamapan",
   "license": "CC-BY-NC-SA-4.0",
   "repository": {
@@ -150,12 +150,13 @@
     "build": "npm run build:extension && npm run build:mcp",
     "build:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
     "build:mcp": "esbuild src/mcp/index.ts --bundle --outfile=dist/mcp/index.js --format=esm --platform=node --external:better-sqlite3 --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" && node scripts/copy-schema.mjs",
+    "build:bundled-db": "node scripts/build-bundled-db.mjs",
     "watch": "tsc -watch -p ./",
     "dev:mcp": "tsx src/mcp/index.ts",
     "inspect": "npx @modelcontextprotocol/inspector tsx src/mcp/index.ts",
     "lint": "eslint src --ext ts",
     "test": "vitest run",
-    "package": "vsce package"
+    "package": "npm run build:bundled-db && vsce package"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.0",

@@ -5,7 +5,7 @@
  */
 
 import Database from "better-sqlite3";
-import { readFileSync, existsSync, mkdirSync } from "fs";
+import { readFileSync, existsSync, mkdirSync, copyFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { homedir } from "os";
@@ -32,8 +32,57 @@ let dbInstance: Database.Database | null = null;
  * デフォルトのデータベースパスを取得
  */
 function getDefaultDatabasePath(): string {
+  // 環境変数でオーバーライド可能（テスト用）
+  if (process.env.D365_UPDATE_DB_PATH) {
+    return process.env.D365_UPDATE_DB_PATH;
+  }
   const dataDir = join(homedir(), ".d365-update");
   return join(dataDir, "d365-updates.db");
+}
+
+/**
+ * 同梱データベースのパスを取得
+ */
+function getBundledDatabasePath(): string {
+  return join(__dirname, "bundled.db");
+}
+
+/**
+ * 同梱データベースからユーザーDBを初期化
+ * ユーザーDBが存在しない場合のみコピー
+ */
+function initializeFromBundledDb(userDbPath: string): boolean {
+  const bundledDbPath = getBundledDatabasePath();
+
+  if (!existsSync(bundledDbPath)) {
+    return false; // 同梱DBが無い場合はスキップ
+  }
+
+  if (existsSync(userDbPath)) {
+    return false; // ユーザーDBが既にある場合はスキップ
+  }
+
+  // ディレクトリ作成
+  const dataDir = dirname(userDbPath);
+  if (!existsSync(dataDir)) {
+    mkdirSync(dataDir, { recursive: true });
+  }
+
+  // 同梱DBをコピー
+  copyFileSync(bundledDbPath, userDbPath);
+
+  // WALファイルもコピー（存在する場合）
+  const bundledWalPath = bundledDbPath + "-wal";
+  if (existsSync(bundledWalPath)) {
+    copyFileSync(bundledWalPath, userDbPath + "-wal");
+  }
+
+  const bundledShmPath = bundledDbPath + "-shm";
+  if (existsSync(bundledShmPath)) {
+    copyFileSync(bundledShmPath, userDbPath + "-shm");
+  }
+
+  return true;
 }
 
 /**
@@ -43,6 +92,12 @@ export function initializeDatabase(
   config: DatabaseConfig = {},
 ): Database.Database {
   const dbPath = config.path ?? getDefaultDatabasePath();
+
+  // 同梱DBからの初期化を試行（ユーザーDBが無い場合のみ）
+  const copiedFromBundled = initializeFromBundledDb(dbPath);
+  if (copiedFromBundled) {
+    console.error("[D365 UPDATE] Initialized database from bundled data");
+  }
 
   // ディレクトリ作成
   const dataDir = dirname(dbPath);

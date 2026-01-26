@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-01-27
+
+### Added
+
+- 📦 **同梱データベース機能**: パッケージ時点の最新データをDBに同梱
+  - 新規インストールユーザーは初回から検索可能（同期不要）
+  - ユーザーDBが存在しない場合、同梱DBから自動初期化
+- 🔧 **環境変数オーバーライド**: `D365_UPDATE_DB_PATH` でDBパスを指定可能（テスト用）
+- 📜 `build:bundled-db` スクリプト追加: 同梱DB準備用
+
+### Changed
+
+- 🏗️ `npm run package` で同梱DB作成を自動実行
+
 ## [0.2.8] - 2026-01-26
 
 ### Fixed
