@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.4] - 2026-01-28
+
+### Fixed
+
+- 📦 **パッケージから .github/ フォルダを除外**: `.vscodeignore` に `.github/` を追加
+  - インストール先でグローバル設定との二重表示問題を解消
+  - 拡張機能サイズの軽量化
+
 ## [0.3.3] - 2026-01-27
 
 ### Changed
