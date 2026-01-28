@@ -50,10 +50,10 @@ New users can search immediately after installation—no sync required!
 
 Instead of fetching all files every time, we implemented **two-level diff checking**:
 
-| Level | What it checks | API calls |
-|-------|---------------|-----------|
+| Level             | What it checks             | API calls              |
+| ----------------- | -------------------------- | ---------------------- |
 | **1. Repository** | Latest commit SHA per repo | 16 calls (lightweight) |
-| **2. File** | File content SHA | Only for changed repos |
+| **2. File**       | File content SHA           | Only for changed repos |
 
 **Result:**
 | Scenario | Time |
@@ -68,13 +68,14 @@ All GitHub API calls leverage parallel execution with semaphore-based concurrenc
 
 ```
 Tree fetching:    4 parallel requests
-File processing:  5 parallel requests  
+File processing:  5 parallel requests
 Commit fetching:  4 parallel requests
 ```
 
 ### 🔄 Background Auto-Sync
 
 MCP server automatically syncs in the background on startup:
+
 - Non-blocking: Search works immediately using cached data
 - Incremental: Only fetches changes since last sync
 - Silent: No user intervention required
@@ -271,4 +272,3 @@ npm run package
 ---
 
 © 2026 yamapan (aktsmm)
-

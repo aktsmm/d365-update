@@ -7,6 +7,9 @@ tsconfig.json
 tsconfig.mcp.json
 **/*.map
 
+# Exclude .github folder from package
+.github/
+
 # Exclude node_modules except better-sqlite3
 node_modules/**
 !node_modules/better-sqlite3/**
