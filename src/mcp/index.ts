@@ -13,7 +13,7 @@ import * as logger from "./utils/logger.js";
  * バックグラウンド自動同期を実行
  */
 async function runBackgroundSync(): Promise<void> {
-  const db = getDatabase();
+  const db = await getDatabase();
   const token =
     process.env.D365_UPDATE_GITHUB_TOKEN || process.env.GITHUB_TOKEN;
 
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
 
   // データベース初期化
   try {
-    getDatabase();
+    await getDatabase();
     logger.info("Database initialized");
   } catch (error) {
     logger.error("Failed to initialize database", { error: String(error) });

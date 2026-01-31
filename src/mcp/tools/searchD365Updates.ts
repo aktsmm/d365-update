@@ -174,7 +174,7 @@ export type SearchD365UpdatesInput = z.infer<typeof searchD365UpdatesSchema>;
 export async function executeSearchD365Updates(
   input: SearchD365UpdatesInput,
 ): Promise<string> {
-  const db = getDatabase();
+  const db = await getDatabase();
 
   // 製品一覧を取得（フィルタのヒント用）
   const products = getProducts(db);

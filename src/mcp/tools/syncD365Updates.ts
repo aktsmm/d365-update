@@ -32,7 +32,7 @@ export type SyncD365UpdatesInput = z.infer<typeof syncD365UpdatesSchema>;
 export async function executeSyncD365Updates(
   input: SyncD365UpdatesInput,
 ): Promise<string> {
-  const db = getDatabase();
+  const db = await getDatabase();
 
   // Token: パラメータ > 環境変数 > なし
   const token =

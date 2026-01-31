@@ -88,7 +88,7 @@ function convertToDocsUrl(fileUrl: string, locale: string): string | null {
 export async function executeGetD365Update(
   input: GetD365UpdateInput,
 ): Promise<string> {
-  const db = getDatabase();
+  const db = await getDatabase();
 
   const update = getUpdateById(db, input.id);
 

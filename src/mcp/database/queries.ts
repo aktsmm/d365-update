@@ -1,30 +1,62 @@
 /**
  * データベースクエリ
+ *
+ * sql.js 用のクエリ関数
  */
 
-import type Database from "better-sqlite3";
+import type { Database as SqlJsDatabase } from "sql.js";
 import type { D365Update, D365Commit, SearchFilters } from "../types.js";
+
+/**
+ * sql.js の結果を型付きオブジェクトに変換するヘルパー
+ */
+function resultToObjects<T>(result: {
+  columns: string[];
+  values: unknown[][];
+}): T[] {
+  const { columns, values } = result;
+  return values.map((row) => {
+    const obj: Record<string, unknown> = {};
+    columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj as T;
+  });
+}
 
 /**
  * 同期チェックポイントを取得
  */
-export function getSyncCheckpoint(db: Database.Database): {
+export function getSyncCheckpoint(db: SqlJsDatabase): {
   lastSync: string;
   syncStatus: string;
   recordCount: number;
 } {
-  return db
-    .prepare(
-      "SELECT last_sync as lastSync, sync_status as syncStatus, record_count as recordCount FROM sync_checkpoint WHERE id = 1",
-    )
-    .get() as { lastSync: string; syncStatus: string; recordCount: number };
+  const result = db.exec(
+    "SELECT last_sync as lastSync, sync_status as syncStatus, record_count as recordCount FROM sync_checkpoint WHERE id = 1",
+  );
+
+  if (result.length === 0 || result[0].values.length === 0) {
+    return {
+      lastSync: "1970-01-01T00:00:00.000Z",
+      syncStatus: "idle",
+      recordCount: 0,
+    };
+  }
+
+  const [lastSync, syncStatus, recordCount] = result[0].values[0] as [
+    string,
+    string,
+    number,
+  ];
+  return { lastSync, syncStatus, recordCount };
 }
 
 /**
  * 同期チェックポイントを更新
  */
 export function updateSyncCheckpoint(
-  db: Database.Database,
+  db: SqlJsDatabase,
   data: {
     lastSync?: string;
     syncStatus?: string;
@@ -58,14 +90,14 @@ export function updateSyncCheckpoint(
   }
 
   const sql = `UPDATE sync_checkpoint SET ${sets.join(", ")} WHERE id = 1`;
-  db.prepare(sql).run(...values);
+  db.run(sql, values);
 }
 
 /**
  * アップデートを upsert
  */
-export function upsertUpdate(db: Database.Database, update: D365Update): void {
-  db.prepare(
+export function upsertUpdate(db: SqlJsDatabase, update: D365Update): void {
+  db.run(
     `
     INSERT INTO d365_updates (
       file_path, title, description, product, version,
@@ -87,28 +119,29 @@ export function upsertUpdate(db: Database.Database, update: D365Update): void {
       raw_content_url = excluded.raw_content_url,
       updated_at = datetime('now')
   `,
-  ).run(
-    update.filePath,
-    update.title,
-    update.description,
-    update.product,
-    update.version,
-    update.releaseDate,
-    update.previewDate,
-    update.gaDate,
-    update.commitSha,
-    update.commitDate,
-    update.firstCommitDate,
-    update.fileUrl,
-    update.rawContentUrl,
+    [
+      update.filePath,
+      update.title,
+      update.description,
+      update.product,
+      update.version,
+      update.releaseDate,
+      update.previewDate,
+      update.gaDate,
+      update.commitSha,
+      update.commitDate,
+      update.firstCommitDate,
+      update.fileUrl,
+      update.rawContentUrl,
+    ],
   );
 }
 
 /**
  * コミットを upsert
  */
-export function upsertCommit(db: Database.Database, commit: D365Commit): void {
-  db.prepare(
+export function upsertCommit(db: SqlJsDatabase, commit: D365Commit): void {
+  db.run(
     `
     INSERT INTO d365_commits (sha, message, author, date, files_changed, additions, deletions)
     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -120,14 +153,15 @@ export function upsertCommit(db: Database.Database, commit: D365Commit): void {
       additions = excluded.additions,
       deletions = excluded.deletions
   `,
-  ).run(
-    commit.sha,
-    commit.message,
-    commit.author,
-    commit.date,
-    commit.filesChanged,
-    commit.additions,
-    commit.deletions,
+    [
+      commit.sha,
+      commit.message,
+      commit.author,
+      commit.date,
+      commit.filesChanged,
+      commit.additions,
+      commit.deletions,
+    ],
   );
 }
 
@@ -135,50 +169,53 @@ export function upsertCommit(db: Database.Database, commit: D365Commit): void {
  * ファイルのコミット日を更新
  */
 export function updateCommitDate(
-  db: Database.Database,
+  db: SqlJsDatabase,
   filePath: string,
   commitDate: string,
   commitSha: string,
 ): void {
-  db.prepare(
+  db.run(
     `
     UPDATE d365_updates 
     SET commit_date = ?, commit_sha = ?, updated_at = datetime('now')
     WHERE file_path LIKE ?
   `,
-  ).run(commitDate, commitSha, `%${filePath}`);
+    [commitDate, commitSha, `%${filePath}`],
+  );
 }
 
 /**
  * ファイルの初回コミット日を更新
  */
 export function updateFirstCommitDate(
-  db: Database.Database,
+  db: SqlJsDatabase,
   filePath: string,
   firstCommitDate: string,
 ): void {
-  db.prepare(
+  db.run(
     `
     UPDATE d365_updates 
     SET first_commit_date = ?, updated_at = datetime('now')
     WHERE file_path LIKE ? AND first_commit_date IS NULL
   `,
-  ).run(firstCommitDate, `%${filePath}`);
+    [firstCommitDate, `%${filePath}`],
+  );
 }
 
 /**
  * 全ファイルの SHA マップを取得（差分同期用）
  */
-export function getFileShaMap(db: Database.Database): Map<string, string> {
-  const rows = db
-    .prepare(
-      `SELECT file_path, commit_sha FROM d365_updates WHERE commit_sha IS NOT NULL`,
-    )
-    .all() as Array<{ file_path: string; commit_sha: string }>;
+export function getFileShaMap(db: SqlJsDatabase): Map<string, string> {
+  const result = db.exec(
+    `SELECT file_path, commit_sha FROM d365_updates WHERE commit_sha IS NOT NULL`,
+  );
 
   const map = new Map<string, string>();
-  for (const row of rows) {
-    map.set(row.file_path, row.commit_sha);
+  if (result.length > 0) {
+    for (const row of result[0].values) {
+      const [filePath, commitSha] = row as [string, string];
+      map.set(filePath, commitSha);
+    }
   }
   return map;
 }
@@ -186,17 +223,16 @@ export function getFileShaMap(db: Database.Database): Map<string, string> {
 /**
  * リポジトリSHAマップを取得（リポジトリレベル差分チェック用）
  */
-export function getRepositoryShaMap(
-  db: Database.Database,
-): Map<string, string> {
+export function getRepositoryShaMap(db: SqlJsDatabase): Map<string, string> {
   try {
-    const rows = db
-      .prepare(`SELECT repo_key, latest_sha FROM repository_shas`)
-      .all() as Array<{ repo_key: string; latest_sha: string }>;
+    const result = db.exec(`SELECT repo_key, latest_sha FROM repository_shas`);
 
     const map = new Map<string, string>();
-    for (const row of rows) {
-      map.set(row.repo_key, row.latest_sha);
+    if (result.length > 0) {
+      for (const row of result[0].values) {
+        const [repoKey, latestSha] = row as [string, string];
+        map.set(repoKey, latestSha);
+      }
     }
     return map;
   } catch {
@@ -209,16 +245,15 @@ export function getRepositoryShaMap(
  * リポジトリSHAを保存（リポジトリレベル差分チェック用）
  */
 export function saveRepositoryShas(
-  db: Database.Database,
+  db: SqlJsDatabase,
   shaMap: Map<string, string>,
 ): void {
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO repository_shas (repo_key, latest_sha, checked_at)
-    VALUES (?, ?, datetime('now'))
-  `);
-
   for (const [repoKey, sha] of shaMap) {
-    stmt.run(repoKey, sha);
+    db.run(
+      `INSERT OR REPLACE INTO repository_shas (repo_key, latest_sha, checked_at)
+       VALUES (?, ?, datetime('now'))`,
+      [repoKey, sha],
+    );
   }
 }
 
@@ -226,7 +261,7 @@ export function saveRepositoryShas(
  * アップデートを検索
  */
 export function searchUpdates(
-  db: Database.Database,
+  db: SqlJsDatabase,
   filters: SearchFilters,
 ): D365Update[] {
   let sql = `
@@ -243,21 +278,29 @@ export function searchUpdates(
   const conditions: string[] = [];
   const params: (string | number)[] = [];
 
-  // 全文検索
+  // 全文検索（sql.js では FTS5 が限定的なので LIKE で代替）
   if (filters.query) {
-    sql = `
-      SELECT 
-        d.id, d.file_path as filePath, d.title, d.description,
-        d.product, d.version, d.release_date as releaseDate,
-        d.preview_date as previewDate, d.ga_date as gaDate,
-        d.commit_sha as commitSha, d.commit_date as commitDate,
-        d.first_commit_date as firstCommitDate,
-        d.file_url as fileUrl, d.raw_content_url as rawContentUrl
-      FROM d365_updates d
-      JOIN d365_updates_fts fts ON d.id = fts.rowid
-      WHERE d365_updates_fts MATCH ?
-    `;
-    params.push(filters.query);
+    // FTS5 テーブルが存在する場合は使用、なければ LIKE 検索
+    try {
+      // FTS5 を試す
+      sql = `
+        SELECT 
+          d.id, d.file_path as filePath, d.title, d.description,
+          d.product, d.version, d.release_date as releaseDate,
+          d.preview_date as previewDate, d.ga_date as gaDate,
+          d.commit_sha as commitSha, d.commit_date as commitDate,
+          d.first_commit_date as firstCommitDate,
+          d.file_url as fileUrl, d.raw_content_url as rawContentUrl
+        FROM d365_updates d
+        JOIN d365_updates_fts fts ON d.id = fts.rowid
+        WHERE d365_updates_fts MATCH ?
+      `;
+      params.push(filters.query);
+    } catch {
+      // FTS5 が無い場合は LIKE 検索にフォールバック
+      conditions.push("(d.title LIKE ? OR d.description LIKE ?)");
+      params.push(`%${filters.query}%`, `%${filters.query}%`);
+    }
   }
 
   // 製品フィルタ
@@ -273,8 +316,6 @@ export function searchUpdates(
   }
 
   // 日付フィルタ
-  // release_date は MM/DD/YYYY 形式、commit_date は ISO 8601 形式
-  // SQLite で release_date を YYYY-MM-DD に変換して比較
   if (filters.dateFrom) {
     conditions.push(`(
       (d.release_date IS NOT NULL AND 
@@ -296,7 +337,7 @@ export function searchUpdates(
     sql += (filters.query ? " AND " : " WHERE ") + conditions.join(" AND ");
   }
 
-  // ソート (release_date を YYYY-MM-DD に変換してソート、なければ commit_date)
+  // ソート
   sql += ` ORDER BY COALESCE(
     CASE WHEN d.release_date IS NOT NULL 
       THEN substr(d.release_date, 7, 4) || '-' || substr(d.release_date, 1, 2) || '-' || substr(d.release_date, 4, 2)
@@ -304,7 +345,7 @@ export function searchUpdates(
     d.commit_date
   ) DESC NULLS LAST`;
 
-  // リミット（指定がなければ全件）
+  // リミット
   if (filters.limit !== undefined) {
     sql += " LIMIT ?";
     params.push(filters.limit);
@@ -314,19 +355,28 @@ export function searchUpdates(
     params.push(filters.offset);
   }
 
-  return db.prepare(sql).all(...params) as D365Update[];
+  // sql.js でパラメータ付きクエリを実行
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+
+  const results: D365Update[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as unknown as D365Update;
+    results.push(row);
+  }
+  stmt.free();
+
+  return results;
 }
 
 /**
  * ID でアップデートを取得
  */
 export function getUpdateById(
-  db: Database.Database,
+  db: SqlJsDatabase,
   id: number,
 ): D365Update | null {
-  return db
-    .prepare(
-      `
+  const stmt = db.prepare(`
     SELECT 
       id, file_path as filePath, title, description,
       product, version, release_date as releaseDate,
@@ -336,37 +386,55 @@ export function getUpdateById(
       file_url as fileUrl, raw_content_url as rawContentUrl
     FROM d365_updates
     WHERE id = ?
-  `,
-    )
-    .get(id) as D365Update | null;
+  `);
+  stmt.bind([id]);
+
+  if (stmt.step()) {
+    const result = stmt.getAsObject() as unknown as D365Update;
+    stmt.free();
+    return result;
+  }
+  stmt.free();
+  return null;
 }
 
 /**
  * 製品一覧を取得
  */
-export function getProducts(db: Database.Database): string[] {
-  const rows = db
-    .prepare("SELECT DISTINCT product FROM d365_updates ORDER BY product")
-    .all() as { product: string }[];
-  return rows.map((r) => r.product);
+export function getProducts(db: SqlJsDatabase): string[] {
+  const result = db.exec(
+    "SELECT DISTINCT product FROM d365_updates ORDER BY product",
+  );
+
+  if (result.length === 0 || result[0].values.length === 0) {
+    return [];
+  }
+
+  return result[0].values.map((row) => row[0] as string);
 }
 
 /**
  * 最近のコミットを取得
  */
 export function getRecentCommits(
-  db: Database.Database,
+  db: SqlJsDatabase,
   limit: number = 20,
 ): D365Commit[] {
-  return db
-    .prepare(
-      `
+  const stmt = db.prepare(`
     SELECT sha, message, author, date, files_changed as filesChanged,
            additions, deletions
     FROM d365_commits
     ORDER BY date DESC
     LIMIT ?
-  `,
-    )
-    .all(limit) as D365Commit[];
+  `);
+  stmt.bind([limit]);
+
+  const results: D365Commit[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as unknown as D365Commit;
+    results.push(row);
+  }
+  stmt.free();
+
+  return results;
 }

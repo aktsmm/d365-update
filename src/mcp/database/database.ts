@@ -1,18 +1,23 @@
 /**
  * データベース初期化・管理
  *
- * SQLite with WAL mode, FTS5 for full-text search
+ * sql.js (WebAssembly) を使用した SQLite データベース
+ * Node.js バージョンに依存しないため、拡張機能の互換性が向上
  */
 
-import Database from "better-sqlite3";
-import { readFileSync, existsSync, mkdirSync, copyFileSync } from "fs";
+import initSqlJs, { type Database as SqlJsDatabase } from "sql.js";
+import {
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  copyFileSync,
+} from "fs";
 import { join, dirname } from "path";
-import { fileURLToPath } from "url";
 import { homedir } from "os";
 
-// ESM-friendly __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// __dirname はビルド時にバナーで定義される（ESM 対応）
+declare const __dirname: string;
 
 /**
  * データベース設定
@@ -26,7 +31,12 @@ export interface DatabaseConfig {
   verbose?: boolean;
 }
 
-let dbInstance: Database.Database | null = null;
+/** sql.js Database インスタンス */
+let dbInstance: SqlJsDatabase | null = null;
+/** 現在のデータベースパス */
+let currentDbPath: string | null = null;
+/** sql.js 初期化 Promise */
+let sqlJsInitPromise: Promise<initSqlJs.SqlJsStatic> | null = null;
 
 /**
  * デフォルトのデータベースパスを取得
@@ -71,26 +81,57 @@ function initializeFromBundledDb(userDbPath: string): boolean {
   // 同梱DBをコピー
   copyFileSync(bundledDbPath, userDbPath);
 
-  // WALファイルもコピー（存在する場合）
-  const bundledWalPath = bundledDbPath + "-wal";
-  if (existsSync(bundledWalPath)) {
-    copyFileSync(bundledWalPath, userDbPath + "-wal");
-  }
-
-  const bundledShmPath = bundledDbPath + "-shm";
-  if (existsSync(bundledShmPath)) {
-    copyFileSync(bundledShmPath, userDbPath + "-shm");
-  }
-
   return true;
 }
 
 /**
- * データベースを初期化
+ * sql.js を初期化（シングルトン）
  */
-export function initializeDatabase(
+async function getSqlJs(): Promise<initSqlJs.SqlJsStatic> {
+  if (!sqlJsInitPromise) {
+    sqlJsInitPromise = initSqlJs({
+      // WASM ファイルを自動的に読み込む（sql.js のデフォルト動作）
+      locateFile: (file: string) => {
+        // node_modules または dist から WASM を探す
+        // tsx 開発時と esbuild バンドル後の両方に対応
+        const paths = [
+          // バンドル後（dist/mcp/）
+          join(__dirname, file),
+          join(__dirname, "..", file),
+          // 開発時（src/mcp/database/ から node_modules を探す）
+          join(
+            __dirname,
+            "..",
+            "..",
+            "..",
+            "node_modules",
+            "sql.js",
+            "dist",
+            file,
+          ),
+          join(__dirname, "..", "..", "node_modules", "sql.js", "dist", file),
+          // プロジェクトルートからの相対パス
+          join(process.cwd(), "node_modules", "sql.js", "dist", file),
+        ];
+        for (const p of paths) {
+          if (existsSync(p)) {
+            return p;
+          }
+        }
+        // デフォルト: sql.js が自動で探す
+        return file;
+      },
+    });
+  }
+  return sqlJsInitPromise;
+}
+
+/**
+ * データベースを初期化（非同期）
+ */
+export async function initializeDatabase(
   config: DatabaseConfig = {},
-): Database.Database {
+): Promise<SqlJsDatabase> {
   const dbPath = config.path ?? getDefaultDatabasePath();
 
   // 同梱DBからの初期化を試行（ユーザーDBが無い場合のみ）
@@ -105,38 +146,64 @@ export function initializeDatabase(
     mkdirSync(dataDir, { recursive: true });
   }
 
-  // データベース接続
-  const db = new Database(dbPath, {
-    readonly: config.readonly ?? false,
-    verbose: config.verbose ? console.error : undefined,
-  });
+  // sql.js 初期化
+  const SQL = await getSqlJs();
 
-  // パフォーマンス最適化
-  db.pragma("journal_mode = WAL");
-  db.pragma("busy_timeout = 5000");
-  db.pragma("cache_size = -64000"); // 64MB
-  db.pragma("temp_store = MEMORY");
-  db.pragma("foreign_keys = ON");
+  // データベースファイルを読み込み、または新規作成
+  let db: SqlJsDatabase;
+  if (existsSync(dbPath)) {
+    const buffer = readFileSync(dbPath);
+    db = new SQL.Database(buffer);
+  } else {
+    db = new SQL.Database();
+  }
+
+  // パスを保存
+  currentDbPath = dbPath;
 
   // スキーマ適用
   if (!isSchemaInitialized(db)) {
     applySchema(db);
+    // 初回スキーマ適用後に保存
+    saveDatabase(db, dbPath);
   } else {
     // 既存DBの場合はマイグレーションを適用
-    migrateSchema(db);
+    const migrated = migrateSchema(db);
+    if (migrated) {
+      saveDatabase(db, dbPath);
+    }
   }
 
   return db;
 }
 
 /**
- * シングルトンデータベースインスタンスを取得
+ * シングルトンデータベースインスタンスを取得（非同期）
  */
-export function getDatabase(config?: DatabaseConfig): Database.Database {
+export async function getDatabase(
+  config?: DatabaseConfig,
+): Promise<SqlJsDatabase> {
   if (!dbInstance) {
-    dbInstance = initializeDatabase(config);
+    dbInstance = await initializeDatabase(config);
   }
   return dbInstance;
+}
+
+/**
+ * データベースをファイルに保存
+ */
+export function saveDatabase(db?: SqlJsDatabase, path?: string): void {
+  const database = db ?? dbInstance;
+  const dbPath = path ?? currentDbPath;
+
+  if (!database || !dbPath) {
+    console.error("[D365 UPDATE] Cannot save database: no instance or path");
+    return;
+  }
+
+  const data = database.export();
+  const buffer = Buffer.from(data);
+  writeFileSync(dbPath, buffer);
 }
 
 /**
@@ -144,103 +211,105 @@ export function getDatabase(config?: DatabaseConfig): Database.Database {
  */
 export function closeDatabase(): void {
   if (dbInstance) {
+    // 閉じる前に保存
+    saveDatabase();
     dbInstance.close();
     dbInstance = null;
+    currentDbPath = null;
   }
 }
 
 /**
  * スキーマが初期化済みか確認
  */
-function isSchemaInitialized(db: Database.Database): boolean {
-  const result = db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'",
-    )
-    .get() as { name: string } | undefined;
-
-  return result !== undefined;
+function isSchemaInitialized(db: SqlJsDatabase): boolean {
+  const result = db.exec(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'",
+  );
+  return result.length > 0 && result[0].values.length > 0;
 }
 
 /**
  * スキーマを適用
  */
-function applySchema(db: Database.Database): void {
+function applySchema(db: SqlJsDatabase): void {
   const schemaPath = join(__dirname, "schema.sql");
   const schemaSql = readFileSync(schemaPath, "utf-8");
-  db.exec(schemaSql);
+  db.run(schemaSql);
 }
 
 /**
  * スキーママイグレーションを適用
  * 既存のデータベースに新しいカラム/テーブルを追加
+ * @returns マイグレーションが適用されたかどうか
  */
-export function migrateSchema(db: Database.Database): void {
+export function migrateSchema(db: SqlJsDatabase): boolean {
+  let migrated = false;
+
   // first_commit_date カラムが存在するか確認
-  const columns = db.prepare("PRAGMA table_info(d365_updates)").all() as Array<{
-    name: string;
-  }>;
+  const columnsResult = db.exec("PRAGMA table_info(d365_updates)");
+  const columns = columnsResult.length > 0 ? columnsResult[0].values : [];
+  const columnNames = columns.map((row) => row[1] as string);
 
-  const hasFirstCommitDate = columns.some(
-    (col) => col.name === "first_commit_date",
-  );
-
-  if (!hasFirstCommitDate) {
-    db.exec("ALTER TABLE d365_updates ADD COLUMN first_commit_date TEXT");
+  if (!columnNames.includes("first_commit_date")) {
+    db.run("ALTER TABLE d365_updates ADD COLUMN first_commit_date TEXT");
+    migrated = true;
   }
 
   // repository_shas テーブルが存在するか確認
-  const hasRepoShasTable = db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='repository_shas'",
-    )
-    .get() as { name: string } | undefined;
+  const tableResult = db.exec(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='repository_shas'",
+  );
+  const hasRepoShasTable =
+    tableResult.length > 0 && tableResult[0].values.length > 0;
 
   if (!hasRepoShasTable) {
-    db.exec(`
+    db.run(`
       CREATE TABLE IF NOT EXISTS repository_shas (
         repo_key TEXT PRIMARY KEY,
         latest_sha TEXT NOT NULL,
         checked_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `);
+    migrated = true;
   }
+
+  return migrated;
 }
 
 /**
  * データベース統計を取得
  */
-export function getDatabaseStats(db: Database.Database): {
+export function getDatabaseStats(db: SqlJsDatabase): {
   updateCount: number;
   featureCount: number;
   commitCount: number;
   productCount: number;
   databaseSizeKB: number;
 } {
-  const updateCount = (
-    db.prepare("SELECT COUNT(*) as count FROM d365_updates").get() as {
-      count: number;
+  const getCount = (table: string): number => {
+    const result = db.exec(`SELECT COUNT(*) as count FROM ${table}`);
+    if (result.length > 0 && result[0].values.length > 0) {
+      return result[0].values[0][0] as number;
     }
-  ).count;
-  const featureCount = (
-    db.prepare("SELECT COUNT(*) as count FROM d365_features").get() as {
-      count: number;
-    }
-  ).count;
-  const commitCount = (
-    db.prepare("SELECT COUNT(*) as count FROM d365_commits").get() as {
-      count: number;
-    }
-  ).count;
-  const productCount = (
-    db
-      .prepare("SELECT COUNT(DISTINCT product) as count FROM d365_updates")
-      .get() as { count: number }
-  ).count;
+    return 0;
+  };
 
-  const pageCount = db.pragma("page_count", { simple: true }) as number;
-  const pageSize = db.pragma("page_size", { simple: true }) as number;
-  const databaseSizeKB = Math.round((pageCount * pageSize) / 1024);
+  const updateCount = getCount("d365_updates");
+  const featureCount = getCount("d365_features");
+  const commitCount = getCount("d365_commits");
+
+  const productResult = db.exec(
+    "SELECT COUNT(DISTINCT product) as count FROM d365_updates",
+  );
+  const productCount =
+    productResult.length > 0 && productResult[0].values.length > 0
+      ? (productResult[0].values[0][0] as number)
+      : 0;
+
+  // sql.js ではファイルサイズを直接取得できないため、export() のサイズを使用
+  const data = db.export();
+  const databaseSizeKB = Math.round(data.length / 1024);
 
   return {
     updateCount,

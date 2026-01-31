@@ -6,8 +6,9 @@
  * 並列処理対応版
  */
 
-import type Database from "better-sqlite3";
+import type { Database as SqlJsDatabase } from "sql.js";
 import type { SyncResult } from "../types.js";
+import { saveDatabase } from "../database/database.js";
 import {
   getWhatsNewFiles,
   getWhatsNewFilesIncremental,
@@ -49,7 +50,7 @@ export interface SyncOptions {
  * 同期実行
  */
 export async function syncFromGitHub(
-  db: Database.Database,
+  db: SqlJsDatabase,
   options: SyncOptions = {},
 ): Promise<SyncResult> {
   const startTime = Date.now();
@@ -265,6 +266,10 @@ export async function syncFromGitHub(
       lastSyncDurationMs: durationMs,
       lastError: errorCount > 0 ? `${errorCount} files failed` : null,
     });
+
+    // データベースをファイルに保存（sql.js はインメモリDBなので明示的に保存が必要）
+    saveDatabase(db);
+    logger.info("Database saved to disk");
 
     logger.info("Sync completed", {
       updatesCount,
