@@ -39,3 +39,8 @@ npm-debug.log*
 
 # Test files
 src/mcp/test-*.ts
+
+# Copilot agent artifacts (keep local in public repos)
+/research/
+/.github/skills/
+/output_sessions/
