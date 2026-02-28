@@ -23,6 +23,19 @@
 
 ---
 
+## 🆕 Latest Release (v0.3.5)
+
+- Updated workflow status display on the dashboard
+- Hardened MCP sync persistence and fallback behavior
+- Migrated DB layer to sql.js to reduce native module dependency
+- Updated LICENSE and operational documentation
+
+### Links
+
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.5
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.4...v0.3.5
+- Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
+
 ## ✨ Features
 
 - 🔍 **Natural Language Search**: Ask "What's new in D365 Finance 10.0.41?" in Copilot Chat
