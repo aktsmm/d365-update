@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.5] - 2026-02-28
+
+### Changed
+
+- 🧭 ダッシュボードのワークフローステータス表示を更新
+
 ## [0.3.4] - 2026-01-28
 
 ### Fixed
