@@ -23,6 +23,19 @@
 
 ---
 
+## 🆕 最新リリース（v0.3.5）
+
+- ダッシュボードのワークフローステータス表示を更新
+- MCP 同期処理の永続化とフォールバック挙動を強化
+- DB レイヤーを sql.js ベースへ移行し、ネイティブ依存を軽減
+- LICENSE と運用ドキュメントを更新
+
+### リンク
+
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.5
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.4...v0.3.5
+- Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
+
 ## ✨ 特徴
 
 - 🔍 **自然言語検索**: Copilot Chat で「D365 Finance 10.0.41 の新機能は？」と聞くだけ
