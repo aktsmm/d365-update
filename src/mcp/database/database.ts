@@ -235,7 +235,89 @@ function isSchemaInitialized(db: SqlJsDatabase): boolean {
 function applySchema(db: SqlJsDatabase): void {
   const schemaPath = join(__dirname, "schema.sql");
   const schemaSql = readFileSync(schemaPath, "utf-8");
-  db.run(schemaSql);
+
+  try {
+    db.run(schemaSql);
+    return;
+  } catch (error) {
+    const message = String(error);
+    if (!message.includes("no such module: fts5")) {
+      throw error;
+    }
+  }
+
+  const schemaWithoutFts = schemaSql
+    .replace(
+      /CREATE VIRTUAL TABLE IF NOT EXISTS d365_updates_fts[\s\S]*?;\s*/g,
+      "",
+    )
+    .replace(/CREATE TRIGGER IF NOT EXISTS d365_updates_ai[\s\S]*?END;\s*/g, "")
+    .replace(/CREATE TRIGGER IF NOT EXISTS d365_updates_au[\s\S]*?END;\s*/g, "")
+    .replace(
+      /CREATE TRIGGER IF NOT EXISTS d365_updates_ad[\s\S]*?END;\s*/g,
+      "",
+    );
+
+  db.run(schemaWithoutFts);
+}
+
+function normalizeReleaseDate(value: string): string | null {
+  const dateText = value.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateText)) {
+    return dateText;
+  }
+
+  const usDateMatch = dateText.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!usDateMatch) {
+    return null;
+  }
+
+  const month = Number(usDateMatch[1]);
+  const day = Number(usDateMatch[2]);
+  const year = Number(usDateMatch[3]);
+
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+}
+
+function normalizeStoredReleaseDates(db: SqlJsDatabase): boolean {
+  const result = db.exec(
+    "SELECT id, release_date FROM d365_updates WHERE release_date IS NOT NULL",
+  );
+
+  if (result.length === 0 || result[0].values.length === 0) {
+    return false;
+  }
+
+  let changed = false;
+  const stmt = db.prepare(
+    "UPDATE d365_updates SET release_date = ?, updated_at = datetime('now') WHERE id = ?",
+  );
+
+  try {
+    for (const row of result[0].values) {
+      const [id, releaseDate] = row as [number, string];
+      const normalized = normalizeReleaseDate(releaseDate);
+
+      if (normalized && normalized !== releaseDate) {
+        stmt.run([normalized, id]);
+        changed = true;
+      }
+    }
+  } finally {
+    stmt.free();
+  }
+
+  return changed;
 }
 
 /**
@@ -271,6 +353,10 @@ export function migrateSchema(db: SqlJsDatabase): boolean {
         checked_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `);
+    migrated = true;
+  }
+
+  if (normalizeStoredReleaseDates(db)) {
     migrated = true;
   }
 

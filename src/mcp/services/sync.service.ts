@@ -19,6 +19,7 @@ import {
 } from "../api/githubClient.js";
 import {
   upsertUpdate,
+  migrateLegacyFilePath,
   upsertCommit,
   updateSyncCheckpoint,
   getSyncCheckpoint,
@@ -28,11 +29,28 @@ import {
   getRepositoryShaMap,
   saveRepositoryShas,
 } from "../database/queries.js";
-import { TARGET_REPOSITORIES } from "../types.js";
 import * as logger from "../utils/logger.js";
 
 /** 並列処理設定 */
 const PARALLEL_FILE_LIMIT = 5;
+
+function safeSaveDatabase(db: SqlJsDatabase): void {
+  try {
+    saveDatabase(db);
+  } catch (error) {
+    logger.warn("Failed to persist database", { error: String(error) });
+  }
+}
+
+function getTotalUpdatesCount(db: SqlJsDatabase): number {
+  const result = db.exec("SELECT COUNT(*) FROM d365_updates");
+  if (result.length === 0 || result[0].values.length === 0) {
+    return 0;
+  }
+
+  const value = result[0].values[0][0];
+  return typeof value === "number" ? value : Number(value ?? 0);
+}
 
 /**
  * 同期オプション
@@ -70,10 +88,15 @@ export async function syncFromGitHub(
       logger.info("Skipping sync, last sync was recent", {
         hoursSinceLastSync,
       });
-      updateSyncCheckpoint(db, { syncStatus: "idle" });
+      const totalUpdatesCount = getTotalUpdatesCount(db);
+      updateSyncCheckpoint(db, {
+        syncStatus: "idle",
+        recordCount: totalUpdatesCount,
+      });
+      safeSaveDatabase(db);
       return {
         success: true,
-        updatesCount: checkpoint.recordCount,
+        updatesCount: totalUpdatesCount,
         commitsCount: 0,
         durationMs: Date.now() - startTime,
       };
@@ -108,11 +131,14 @@ export async function syncFromGitHub(
       // 変更がなければ早期リターン
       if (result.changedRepos.length === 0) {
         const durationMs = Date.now() - startTime;
+        const totalUpdatesCount = getTotalUpdatesCount(db);
         updateSyncCheckpoint(db, {
           lastSync: new Date().toISOString(),
           syncStatus: "idle",
+          recordCount: totalUpdatesCount,
           lastSyncDurationMs: durationMs,
         });
+        safeSaveDatabase(db);
         logger.info("No repository changes detected, sync skipped", {
           durationMs,
         });
@@ -171,6 +197,7 @@ export async function syncFromGitHub(
 
       for (const result of results) {
         if (result.success && "update" in result) {
+          migrateLegacyFilePath(db, result.file.repoPath, result.file.path);
           upsertUpdate(db, result.update);
           updatesCount++;
         } else {
@@ -211,6 +238,9 @@ export async function syncFromGitHub(
     for (const [filePath, info] of changedFiles) {
       try {
         updateCommitDate(db, filePath, info.date, info.sha);
+        if (info.repoPath !== filePath) {
+          updateCommitDate(db, info.repoPath, info.date, info.sha);
+        }
       } catch (error) {
         logger.warn("Failed to update commit date", {
           filePath,
@@ -222,23 +252,20 @@ export async function syncFromGitHub(
     // 初回コミット日を取得（変更されたファイルのみ、API 負荷を考慮）
     // 変更されたファイルの初回コミット日のみ取得（最大10件）
     let firstCommitFetched = 0;
-    for (const [filePath] of [...changedFiles].slice(0, 10)) {
+    for (const [filePath, info] of [...changedFiles].slice(0, 10)) {
       try {
-        // ファイルパスからリポジトリ情報を推測
-        for (const repo of TARGET_REPOSITORIES) {
-          if (filePath.startsWith(repo.basePath)) {
-            const firstCommit = await getFileFirstCommitDate(
-              repo.owner,
-              repo.repo,
-              filePath,
-              token,
-            );
-            if (firstCommit) {
-              updateFirstCommitDate(db, filePath, firstCommit.date);
-              firstCommitFetched++;
-            }
-            break;
+        const firstCommit = await getFileFirstCommitDate(
+          info.repoOwner,
+          info.repoName,
+          info.repoPath,
+          token,
+        );
+        if (firstCommit) {
+          updateFirstCommitDate(db, filePath, firstCommit.date);
+          if (info.repoPath !== filePath) {
+            updateFirstCommitDate(db, info.repoPath, firstCommit.date);
           }
+          firstCommitFetched++;
         }
       } catch (error) {
         logger.warn("Failed to get first commit date", {
@@ -251,6 +278,7 @@ export async function syncFromGitHub(
     logger.info("First commit dates updated", { count: firstCommitFetched });
 
     const durationMs = Date.now() - startTime;
+    const totalUpdatesCount = getTotalUpdatesCount(db);
 
     // リポジトリSHAを保存（次回のインクリメンタル同期用）
     if (newRepoShaMap) {
@@ -262,13 +290,13 @@ export async function syncFromGitHub(
     updateSyncCheckpoint(db, {
       lastSync: new Date().toISOString(),
       syncStatus: "idle",
-      recordCount: updatesCount,
+      recordCount: totalUpdatesCount,
       lastSyncDurationMs: durationMs,
       lastError: errorCount > 0 ? `${errorCount} files failed` : null,
     });
 
     // データベースをファイルに保存（sql.js はインメモリDBなので明示的に保存が必要）
-    saveDatabase(db);
+    safeSaveDatabase(db);
     logger.info("Database saved to disk");
 
     logger.info("Sync completed", {
@@ -292,6 +320,7 @@ export async function syncFromGitHub(
       syncStatus: "error",
       lastError: errorMessage,
     });
+    safeSaveDatabase(db);
 
     logger.error("Sync failed", { error: errorMessage, durationMs });
 

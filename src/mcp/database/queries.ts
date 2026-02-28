@@ -138,6 +138,43 @@ export function upsertUpdate(db: SqlJsDatabase, update: D365Update): void {
 }
 
 /**
+ * 旧形式の file_path（repoPath）を新形式（owner/repo/repoPath）へ移行
+ * すでに新形式が存在する場合は何もしない
+ */
+export function migrateLegacyFilePath(
+  db: SqlJsDatabase,
+  legacyPath: string,
+  storagePath: string,
+): void {
+  if (!legacyPath || legacyPath === storagePath) {
+    return;
+  }
+
+  db.run(
+    `
+    UPDATE d365_updates
+    SET file_path = ?, updated_at = datetime('now')
+    WHERE file_path = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM d365_updates WHERE file_path = ?
+      )
+  `,
+    [storagePath, legacyPath, storagePath],
+  );
+
+  db.run(
+    `
+    DELETE FROM d365_updates
+    WHERE file_path = ?
+      AND EXISTS (
+        SELECT 1 FROM d365_updates WHERE file_path = ?
+      )
+  `,
+    [legacyPath, storagePath],
+  );
+}
+
+/**
  * コミットを upsert
  */
 export function upsertCommit(db: SqlJsDatabase, commit: D365Commit): void {
@@ -178,9 +215,9 @@ export function updateCommitDate(
     `
     UPDATE d365_updates 
     SET commit_date = ?, commit_sha = ?, updated_at = datetime('now')
-    WHERE file_path LIKE ?
+    WHERE file_path = ?
   `,
-    [commitDate, commitSha, `%${filePath}`],
+    [commitDate, commitSha, filePath],
   );
 }
 
@@ -196,10 +233,29 @@ export function updateFirstCommitDate(
     `
     UPDATE d365_updates 
     SET first_commit_date = ?, updated_at = datetime('now')
-    WHERE file_path LIKE ? AND first_commit_date IS NULL
+    WHERE file_path = ? AND first_commit_date IS NULL
   `,
-    [firstCommitDate, `%${filePath}`],
+    [firstCommitDate, filePath],
   );
+}
+
+function hasFtsTable(db: SqlJsDatabase): boolean {
+  const result = db.exec(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='d365_updates_fts' LIMIT 1",
+  );
+  return result.length > 0 && result[0].values.length > 0;
+}
+
+function buildFtsQuery(query: string): string | null {
+  const tokens = query.match(/[\p{L}\p{N}_-]+/gu);
+  if (!tokens || tokens.length === 0) {
+    return null;
+  }
+
+  return tokens
+    .map((token) => token.replace(/"/g, '""'))
+    .map((token) => `"${token}"`)
+    .join(" OR ");
 }
 
 /**
@@ -277,12 +333,15 @@ export function searchUpdates(
 
   const conditions: string[] = [];
   const params: (string | number)[] = [];
+  let usesFtsMatch = false;
 
   // 全文検索（sql.js では FTS5 が限定的なので LIKE で代替）
   if (filters.query) {
     // FTS5 テーブルが存在する場合は使用、なければ LIKE 検索
-    try {
-      // FTS5 を試す
+    const ftsQuery = hasFtsTable(db) ? buildFtsQuery(filters.query) : null;
+
+    if (ftsQuery) {
+      usesFtsMatch = true;
       sql = `
         SELECT 
           d.id, d.file_path as filePath, d.title, d.description,
@@ -295,9 +354,8 @@ export function searchUpdates(
         JOIN d365_updates_fts fts ON d.id = fts.rowid
         WHERE d365_updates_fts MATCH ?
       `;
-      params.push(filters.query);
-    } catch {
-      // FTS5 が無い場合は LIKE 検索にフォールバック
+      params.push(ftsQuery);
+    } else {
       conditions.push("(d.title LIKE ? OR d.description LIKE ?)");
       params.push(`%${filters.query}%`, `%${filters.query}%`);
     }
@@ -319,29 +377,27 @@ export function searchUpdates(
   if (filters.dateFrom) {
     conditions.push(`(
       (d.release_date IS NOT NULL AND 
-       substr(d.release_date, 7, 4) || '-' || substr(d.release_date, 1, 2) || '-' || substr(d.release_date, 4, 2) >= ?) 
-      OR (d.commit_date IS NOT NULL AND d.commit_date >= ?)
+       date(d.release_date) >= date(?)) 
+      OR (d.commit_date IS NOT NULL AND date(d.commit_date) >= date(?))
     )`);
     params.push(filters.dateFrom, filters.dateFrom);
   }
   if (filters.dateTo) {
     conditions.push(`(
       (d.release_date IS NOT NULL AND 
-       substr(d.release_date, 7, 4) || '-' || substr(d.release_date, 1, 2) || '-' || substr(d.release_date, 4, 2) <= ?) 
-      OR (d.commit_date IS NOT NULL AND d.commit_date <= ?)
+       date(d.release_date) <= date(?)) 
+      OR (d.commit_date IS NOT NULL AND date(d.commit_date) <= date(?))
     )`);
     params.push(filters.dateTo, filters.dateTo);
   }
 
   if (conditions.length > 0) {
-    sql += (filters.query ? " AND " : " WHERE ") + conditions.join(" AND ");
+    sql += (usesFtsMatch ? " AND " : " WHERE ") + conditions.join(" AND ");
   }
 
   // ソート
   sql += ` ORDER BY COALESCE(
-    CASE WHEN d.release_date IS NOT NULL 
-      THEN substr(d.release_date, 7, 4) || '-' || substr(d.release_date, 1, 2) || '-' || substr(d.release_date, 4, 2)
-      ELSE NULL END,
+    d.release_date,
     d.commit_date
   ) DESC NULLS LAST`;
 
@@ -351,6 +407,9 @@ export function searchUpdates(
     params.push(filters.limit);
   }
   if (filters.offset !== undefined && filters.offset > 0) {
+    if (filters.limit === undefined) {
+      sql += " LIMIT -1";
+    }
     sql += " OFFSET ?";
     params.push(filters.offset);
   }

@@ -8,7 +8,7 @@ import * as path from "path";
 import * as os from "os";
 
 // バージョン情報
-const VERSION = "0.1.0";
+const DEFAULT_VERSION = "0.0.0";
 const EXTENSION_NAME = "D365 UPDATE MCP";
 const MCP_SERVER_NAME = "d365-update";
 
@@ -142,7 +142,9 @@ async function registerMcpServer(
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-  console.log(`${EXTENSION_NAME} v${VERSION} activated`);
+  const extensionVersion =
+    context.extension.packageJSON.version ?? DEFAULT_VERSION;
+  console.log(`${EXTENSION_NAME} v${extensionVersion} activated`);
   console.log("Extension path:", context.extensionPath);
 
   // MCP サーバーを mcp.json に登録
@@ -221,7 +223,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       vscode.window
         .showInformationMessage(
-          `${EXTENSION_NAME} v${VERSION}\n` +
+          `${EXTENSION_NAME} v${extensionVersion}\n` +
             `GitHub Token: ${hasToken ? "✓ 設定済み" : "✗ 未設定"}\n` +
             `Auto Sync: ${autoSync ? "有効" : "無効"} (${syncInterval}時間ごと)`,
           "設定を開く",

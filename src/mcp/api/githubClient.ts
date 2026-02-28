@@ -24,6 +24,56 @@ const PARALLEL_TREE_LIMIT = 4; // ツリー取得の同時実行数
 const PARALLEL_FILE_LIMIT = 5; // ファイル処理の同時実行数
 const PARALLEL_COMMIT_LIMIT = 4; // コミット取得の同時実行数
 
+function resolveCommitDetailsPerRepoLimit(): number {
+  const rawValue = process.env.D365_UPDATE_MAX_COMMIT_DETAILS_PER_REPO;
+  if (!rawValue) {
+    return 30;
+  }
+
+  const normalized = rawValue.trim();
+  if (!/^\d+$/.test(normalized)) {
+    return 30;
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 30;
+  }
+
+  return Math.min(parsed, 200);
+}
+
+const MAX_COMMIT_DETAILS_PER_REPO = resolveCommitDetailsPerRepoLimit(); // リポジトリごとのコミット詳細取得上限
+
+interface WhatsNewFile {
+  path: string;
+  repoPath: string;
+  repoOwner: string;
+  repoName: string;
+  url: string;
+  rawUrl: string;
+  product: string;
+  version: string | null;
+  sha: string;
+}
+
+interface ChangedFileInfo {
+  date: string;
+  sha: string;
+  message: string;
+  repoOwner: string;
+  repoName: string;
+  repoPath: string;
+}
+
+function buildStoragePath(
+  owner: string,
+  repo: string,
+  repoPath: string,
+): string {
+  return `${owner}/${repo}/${repoPath}`;
+}
+
 /**
  * 並列処理用のセマフォ
  */
@@ -81,9 +131,7 @@ async function githubFetch(url: string, token?: string): Promise<Response> {
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
-    logger.info("Using GitHub token for API request", {
-      tokenPrefix: token.substring(0, 10),
-    });
+    logger.info("Using GitHub token for API request");
   } else {
     logger.warn(
       "No GitHub token provided, using unauthenticated request (60/hour limit)",
@@ -162,6 +210,34 @@ function extractVersion(filePath: string): string | null {
   return null;
 }
 
+function normalizeReleaseDate(rawDate: string): string {
+  const value = rawDate.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const usDate = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!usDate) {
+    return value;
+  }
+
+  const month = Number(usDate[1]);
+  const day = Number(usDate[2]);
+  const year = Number(usDate[3]);
+
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    return value;
+  }
+
+  return `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+}
+
 /**
  * Markdown ファイルのフロントマターを解析
  */
@@ -189,9 +265,9 @@ function parseFrontmatter(content: string): {
   if (descMatch) result.description = descMatch[1].trim();
 
   const dateMatch = frontmatter.match(
-    /^(?:ms\.)?date:\s*(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/m,
+    /^(?:ms\.)?date:\s*["']?(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})["']?\s*$/m,
   );
-  if (dateMatch) result.date = dateMatch[1];
+  if (dateMatch) result.date = normalizeReleaseDate(dateMatch[1]);
 
   return result;
 }
@@ -281,16 +357,9 @@ export async function getRepositoryTree(
 /**
  * what's-new ファイル一覧を取得（並列処理版）
  */
-export async function getWhatsNewFiles(token?: string): Promise<
-  Array<{
-    path: string;
-    url: string;
-    rawUrl: string;
-    product: string;
-    version: string | null;
-    sha: string;
-  }>
-> {
+export async function getWhatsNewFiles(
+  token?: string,
+): Promise<WhatsNewFile[]> {
   logger.info("Fetching what's-new files (parallel)", {
     repoCount: TARGET_REPOSITORIES.length,
     parallelLimit: PARALLEL_TREE_LIMIT,
@@ -308,14 +377,7 @@ export async function getWhatsNewFiles(token?: string): Promise<
         token,
       );
 
-      const files: Array<{
-        path: string;
-        url: string;
-        rawUrl: string;
-        product: string;
-        version: string | null;
-        sha: string;
-      }> = [];
+      const files: WhatsNewFile[] = [];
 
       for (const item of tree) {
         if (item.type !== "blob") continue;
@@ -324,7 +386,10 @@ export async function getWhatsNewFiles(token?: string): Promise<
         if (!isWhatsNewFile(item.path)) continue;
 
         files.push({
-          path: item.path,
+          path: buildStoragePath(repo.owner, repo.repo, item.path),
+          repoPath: item.path,
+          repoOwner: repo.owner,
+          repoName: repo.repo,
           url: `https://github.com/${repo.owner}/${repo.repo}/blob/${repo.branch}/${item.path}`,
           rawUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repo.branch}/${item.path}`,
           product: inferProduct(item.path),
@@ -350,14 +415,7 @@ export async function getWhatsNewFilesIncremental(
   previousShaMap: Map<string, string>,
   token?: string,
 ): Promise<{
-  files: Array<{
-    path: string;
-    url: string;
-    rawUrl: string;
-    product: string;
-    version: string | null;
-    sha: string;
-  }>;
+  files: WhatsNewFile[];
   newShaMap: Map<string, string>;
   changedRepos: string[];
   skippedRepos: string[];
@@ -409,14 +467,7 @@ export async function getWhatsNewFilesIncremental(
         token,
       );
 
-      const files: Array<{
-        path: string;
-        url: string;
-        rawUrl: string;
-        product: string;
-        version: string | null;
-        sha: string;
-      }> = [];
+      const files: WhatsNewFile[] = [];
 
       for (const item of tree) {
         if (item.type !== "blob") continue;
@@ -425,7 +476,10 @@ export async function getWhatsNewFilesIncremental(
         if (!isWhatsNewFile(item.path)) continue;
 
         files.push({
-          path: item.path,
+          path: buildStoragePath(repo.owner, repo.repo, item.path),
+          repoPath: item.path,
+          repoOwner: repo.owner,
+          repoName: repo.repo,
           url: `https://github.com/${repo.owner}/${repo.repo}/blob/${repo.branch}/${item.path}`,
           rawUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repo.branch}/${item.path}`,
           product: inferProduct(item.path),
@@ -496,7 +550,8 @@ export async function getFileFirstCommitDate(
 ): Promise<{ date: string; sha: string } | null> {
   // per_page=1 で最後のページを取得することで初回コミットを取得
   // まず全コミット数を確認
-  const url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${filePath}&per_page=1`;
+  const encodedPath = encodeURIComponent(filePath);
+  const url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${encodedPath}&per_page=1`;
 
   try {
     const response = await githubFetch(url, token);
@@ -545,7 +600,8 @@ export async function getFileLastCommitDate(
   filePath: string,
   token?: string,
 ): Promise<{ date: string; sha: string } | null> {
-  const url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${filePath}&per_page=1`;
+  const encodedPath = encodeURIComponent(filePath);
+  const url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${encodedPath}&per_page=1`;
 
   try {
     const response = await githubFetch(url, token);
@@ -573,11 +629,8 @@ export async function getFileLastCommitDate(
 export async function getRecentlyChangedFiles(
   since: string,
   token?: string,
-): Promise<Map<string, { date: string; sha: string; message: string }>> {
-  const changedFiles = new Map<
-    string,
-    { date: string; sha: string; message: string }
-  >();
+): Promise<Map<string, ChangedFileInfo>> {
+  const changedFiles = new Map<string, ChangedFileInfo>();
 
   logger.info("Fetching recently changed files (parallel)", {
     since,
@@ -589,10 +642,7 @@ export async function getRecentlyChangedFiles(
     TARGET_REPOSITORIES,
     PARALLEL_COMMIT_LIMIT,
     async (repo) => {
-      const localChanges = new Map<
-        string,
-        { date: string; sha: string; message: string }
-      >();
+      const localChanges = new Map<string, ChangedFileInfo>();
 
       const url = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?path=${repo.basePath}&per_page=50&since=${since}`;
 
@@ -600,38 +650,56 @@ export async function getRecentlyChangedFiles(
         const response = await githubFetch(url, token);
         const commits = (await response.json()) as GitHubCommit[];
 
-        // コミット詳細取得も並列化（最大5件まで）
+        // コミット詳細取得も並列化（上限付き）
         const commitDetails = await parallelLimit(
-          commits.slice(0, 10),
+          commits.slice(0, MAX_COMMIT_DETAILS_PER_REPO),
           PARALLEL_FILE_LIMIT,
           async (commit) => {
-            const detailUrl = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits/${commit.sha}`;
-            const detailResponse = await githubFetch(detailUrl, token);
-            const detail = (await detailResponse.json()) as {
-              files?: Array<{ filename: string; status: string }>;
-            };
-            return { commit, detail };
+            try {
+              const detailUrl = `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits/${commit.sha}`;
+              const detailResponse = await githubFetch(detailUrl, token);
+              const detail = (await detailResponse.json()) as {
+                files?: Array<{ filename: string; status: string }>;
+              };
+              return { commit, detail };
+            } catch (error) {
+              logger.warn("Failed to get commit detail", {
+                repo: repo.repo,
+                sha: commit.sha,
+                error: String(error),
+              });
+              return { commit, detail: null };
+            }
           },
         );
 
         for (const { commit, detail } of commitDetails) {
-          if (detail.files) {
+          if (detail?.files) {
             for (const file of detail.files) {
               if (
+                file.filename.startsWith(`${repo.basePath}/`) &&
                 isWhatsNewFile(file.filename) &&
                 file.filename.endsWith(".md")
               ) {
-                const existing = localChanges.get(file.filename);
+                const storagePath = buildStoragePath(
+                  repo.owner,
+                  repo.repo,
+                  file.filename,
+                );
+                const existing = localChanges.get(storagePath);
                 if (
                   !existing ||
                   new Date(commit.commit.author.date) > new Date(existing.date)
                 ) {
-                  localChanges.set(file.filename, {
+                  localChanges.set(storagePath, {
                     date: commit.commit.author.date,
                     sha: commit.sha,
                     message: commit.commit.message
                       .split("\n")[0]
                       .substring(0, 100),
+                    repoOwner: repo.owner,
+                    repoName: repo.repo,
+                    repoPath: file.filename,
                   });
                 }
               }
@@ -651,10 +719,10 @@ export async function getRecentlyChangedFiles(
 
   // 結果をマージ
   for (const localChanges of repoResults) {
-    for (const [filename, info] of localChanges) {
-      const existing = changedFiles.get(filename);
+    for (const [storagePath, info] of localChanges) {
+      const existing = changedFiles.get(storagePath);
       if (!existing || new Date(info.date) > new Date(existing.date)) {
-        changedFiles.set(filename, info);
+        changedFiles.set(storagePath, info);
       }
     }
   }

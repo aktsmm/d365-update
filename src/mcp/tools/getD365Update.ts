@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { getDatabase } from "../database/database.js";
 import { getUpdateById } from "../database/queries.js";
+import { convertToDocsUrl } from "../utils/docsUrl.js";
 
 /**
  * ツール入力スキーマ
@@ -60,29 +61,6 @@ function generateReferenceUrls(
 }
 
 /**
- * GitHub ファイルパスから Microsoft Learn Docs URL を生成
- */
-function convertToDocsUrl(fileUrl: string, locale: string): string | null {
-  const match = fileUrl.match(
-    /github\.com\/MicrosoftDocs\/([^/]+)\/blob\/main\/articles\/(.+)\.md$/,
-  );
-  if (!match) return null;
-
-  const [, repo, path] = match;
-
-  const repoToDocsBase: Record<string, string> = {
-    "dynamics-365-unified-operations-public": "dynamics365/unified-operations",
-    "dynamics-365-project-operations": "dynamics365/project-operations",
-    "dynamics365smb-docs": "dynamics365/business-central",
-  };
-
-  const docsBase = repoToDocsBase[repo];
-  if (!docsBase) return null;
-
-  return `https://learn.microsoft.com/${locale}/${docsBase}/${path}`;
-}
-
-/**
  * ツール実行
  */
 export async function executeGetD365Update(
@@ -106,7 +84,8 @@ export async function executeGetD365Update(
   const urls = generateReferenceUrls(update.product, update.version, locale);
 
   // Docs URL を生成
-  const docsUrl = convertToDocsUrl(update.fileUrl, locale);
+  const docsUrl =
+    convertToDocsUrl(update.fileUrl, locale) || urls.learnSearchUrl;
 
   // GitHub コミット履歴リンク
   const commitsUrl = update.fileUrl?.replace("/blob/", "/commits/") || null;
