@@ -228,9 +228,9 @@ Copilot Chat でこのように聞いてください:
 - ✅ ローカル全文検索は引き続き動作
 - ✅ すべての機能が利用可能
 
-### 問題: 「Cannot find module ... dist/mcp/index.js」エラー（アップデート後またはプロファイル変更時）
+### 問題: 「Cannot find module ... dist/mcp/index.mjs」エラー（アップデート後またはプロファイル変更時）
 
-**原因**: ユーザー設定に絶対パス（例: `c:\Users\<旧ユーザー名>\...\d365-update\dist\mcp\index.js`）が保存されており、以下の場合に無効になります：
+**原因**: ユーザー設定に絶対パス（例: `c:\Users\<旧ユーザー名>\...\d365-update\dist\mcp\index.mjs`）が保存されており、以下の場合に無効になります：
 
 - Windows ユーザー名が変更された場合
 - ユーザーホームディレクトリが移動した場合
@@ -242,17 +242,23 @@ Copilot Chat でこのように聞いてください:
 // ❌ 使わないでください（絶対パス）
 "d365-update": {
   "command": "node",
-  "args": ["c:\\Users\\admin\\...\\d365-update-0.3.7\\dist\\mcp\\index.js"]
+  "args": ["c:\\Users\\admin\\...\\d365-update-0.3.9\\dist\\mcp\\index.mjs"]
 }
 
 // ✅ 推奨（相対パス）
 "d365-update": {
   "command": "node",
-  "args": ["${extensionPath}/dist/mcp/index.js"]
+  "args": ["${extensionPath}/dist/mcp/index.mjs"]
 }
 ```
 
 この拡張機能を VS Code 設定に手動で追加した場合は、相対パス形式に変更してください。
+
+### 問題: 「Cannot use import statement outside a module」
+
+**原因**: MCP エントリポイントが ES module なのに、CommonJS 境界配下の `.js` として Node.js に読み込まれていました。
+
+**解決方法**: v0.3.9+ では MCP エントリポイントを `dist/mcp/index.mjs` として配布し、拡張マニフェストと `mcp.json` 更新処理の両方をそのパスに統一しています。
 
 ### 問題: Node.js 起動時に警告が表示される
 
@@ -260,7 +266,7 @@ Copilot Chat でこのように聞いてください:
 
 **原因**: Node.js v20 以降では明示的なモジュールタイプ宣言が必要
 
-**解決方法**: これは v0.3.8+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
+**解決方法**: これは v0.3.9+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
 
 ---
 

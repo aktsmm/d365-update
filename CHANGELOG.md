@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.9] - 2026-05-11
+
+### Fixed
+
+- 🧩 **MCP module format mismatch**: `dist/mcp/index.js` を ESM のまま配布していたため、CommonJS package boundary 下で `Cannot use import statement outside a module` が発生していた問題を修正
+- 🚀 **MCP entrypoint alignment**: 配布物・manifest・`mcp.json` 自動登録・開発 task / launch をすべて `dist/mcp/index.mjs` に統一
+- 📚 **Troubleshooting update**: ESM/CJS 不一致に関する説明と recovery 手順を README / README_ja に追加
+
 ## [0.3.8] - 2026-05-11
 
 ### Fixed

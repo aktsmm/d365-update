@@ -228,9 +228,9 @@ Syncs from **16 MicrosoftDocs repositories**:
 - ✅ Local full-text search still works
 - ✅ All features remain functional
 
-### Issue: "Cannot find module ... dist/mcp/index.js" after update or profile change
+### Issue: "Cannot find module ... dist/mcp/index.mjs" after update or profile change
 
-**Cause**: User settings contain an absolute path (e.g., `c:\Users\<old-username>\...\d365-update\dist\mcp\index.js`) that becomes invalid when:
+**Cause**: User settings contain an absolute path (e.g., `c:\Users\<old-username>\...\d365-update\dist\mcp\index.mjs`) that becomes invalid when:
 
 - Windows username changes
 - User home directory moves
@@ -242,17 +242,23 @@ Syncs from **16 MicrosoftDocs repositories**:
 // ❌ DO NOT USE (absolute path)
 "d365-update": {
   "command": "node",
-  "args": ["c:\\Users\\admin\\...\\d365-update-0.3.7\\dist\\mcp\\index.js"]
+  "args": ["c:\\Users\\admin\\...\\d365-update-0.3.9\\dist\\mcp\\index.mjs"]
 }
 
 // ✅ RECOMMENDED (relative path)
 "d365-update": {
   "command": "node",
-  "args": ["${extensionPath}/dist/mcp/index.js"]
+  "args": ["${extensionPath}/dist/mcp/index.mjs"]
 }
 ```
 
 If you've manually added this extension to VS Code settings, update it using the relative path format.
+
+### Issue: "Cannot use import statement outside a module"
+
+**Cause**: The MCP entrypoint is an ES module, but Node.js was asked to load a `.js` path under a CommonJS package boundary.
+
+**Solution**: This is fixed in v0.3.9+ by shipping the MCP entrypoint as `dist/mcp/index.mjs` and registering that exact path in the extension manifest and `mcp.json` update flow.
 
 ### Issue: Node.js warnings during startup
 
@@ -260,7 +266,7 @@ If you've manually added this extension to VS Code settings, update it using the
 
 **Cause**: Node.js v20+ requires explicit module type declaration
 
-**Solution**: This is fixed in v0.3.8+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
+**Solution**: This is fixed in v0.3.9+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
 
 ---
 

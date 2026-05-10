@@ -13,7 +13,7 @@
       "name": "Debug MCP Server",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/dist/mcp/index.js",
+      "program": "${workspaceFolder}/dist/mcp/index.mjs",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "env": {
         "GITHUB_TOKEN": "${config:d365Update.githubToken}",
@@ -30,7 +30,7 @@
       "runtimeArgs": [
         "@modelcontextprotocol/inspector",
         "node",
-        "${workspaceFolder}/dist/mcp/index.js"
+        "${workspaceFolder}/dist/mcp/index.mjs"
       ],
       "env": {
         "GITHUB_TOKEN": "${config:d365Update.githubToken}"

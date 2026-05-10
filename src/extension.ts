@@ -52,7 +52,7 @@ async function registerMcpServer(
 
   // 拡張機能の MCP サーバーパス（スラッシュに統一）
   const mcpServerPath = path
-    .join(context.extensionPath, "dist", "mcp", "index.js")
+    .join(context.extensionPath, "dist", "mcp", "index.mjs")
     .replace(/\\/g, "/");
 
   try {

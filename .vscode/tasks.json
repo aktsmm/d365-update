@@ -28,7 +28,7 @@
     {
       "type": "shell",
       "label": "MCP Inspector",
-      "command": "npx @modelcontextprotocol/inspector node dist/mcp/index.js",
+      "command": "npx @modelcontextprotocol/inspector node dist/mcp/index.mjs",
       "problemMatcher": [],
       "isBackground": true
     }
