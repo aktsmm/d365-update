@@ -1,13 +1,11 @@
 node_modules/
 dist/
 *.vsix
+artifacts/
 .d365-update/
 *.db
 *.db-wal
 *.db-shm
-
-# Test files
-src/mcp/test-*.ts
 
 # Output
 output_sessions/
@@ -36,9 +34,6 @@ npm-debug.log*
 # Cache
 .npm/
 .eslintcache
-
-# Test files
-src/mcp/test-*.ts
 
 # Copilot agent artifacts (keep local in public repos)
 /research/

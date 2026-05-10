@@ -23,17 +23,18 @@
 
 ---
 
-## 🆕 最新リリース（v0.3.10）
+## 🆕 最新リリース（v0.3.11）
 
 - FTS5 非対応環境での起動フォールバックを修正
 - `schema.sql`、`sql-wasm.wasm`、同梱 DB の配布漏れを防止
 - MCP 実行エントリを `dist/mcp/index.mjs` に統一
 - `package.json` / 拡張コード / VS Code 設定の `.mjs` 契約テストを追加
+- ローカル VSIX を `artifacts/vsix/` 配下へ集約し、古いアーカイブを自動整理
 
 ### リンク
 
-- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.10
-- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.9...v0.3.10
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.11
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.10...v0.3.11
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
 
 ## ✨ 特徴
@@ -327,7 +328,7 @@ npm run build
 # MCP Inspector でテスト
 npm run inspect
 
-# 配布用パッケージ作成
+# 配布用パッケージ作成（artifacts/vsix/ に出力）
 npm run package
 ```
 

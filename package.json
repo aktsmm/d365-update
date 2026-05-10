@@ -3,7 +3,7 @@
   "name": "d365-update",
   "displayName": "D365 UPDATE MCP",
   "description": "Search and retrieve Dynamics 365 update information from GitHub Docs via Copilot Chat",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "publisher": "yamapan",
   "license": "CC-BY-NC-SA-4.0",
   "repository": {
@@ -159,7 +159,7 @@
     "inspect": "npx @modelcontextprotocol/inspector tsx src/mcp/index.ts",
     "lint": "eslint src --ext ts",
     "test": "vitest run",
-    "package": "vsce package"
+    "package": "node scripts/package-vsix.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.0",

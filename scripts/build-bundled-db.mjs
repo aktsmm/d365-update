@@ -8,7 +8,7 @@
  * 使用方法:
  *   1. 事前に `d365-update.syncUpdates` コマンドを実行してDBを最新化
  *   2. `npm run build:bundled-db` を実行
- *   3. `npm run package` でパッケージング
+ *   3. `npm run package` で `artifacts/vsix/` へパッケージング
  */
 
 import { existsSync, copyFileSync, mkdirSync, statSync, unlinkSync } from "fs";
@@ -75,7 +75,7 @@ function main() {
   console.log(`   出力先: ${bundledDbPath}`);
 
   console.log("\n🎉 次のステップ:");
-  console.log("   npm run package");
+  console.log("   npm run package  (artifacts/vsix/ に出力)");
 }
 
 main();

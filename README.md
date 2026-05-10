@@ -23,17 +23,18 @@
 
 ---
 
-## 🆕 Latest Release (v0.3.10)
+## 🆕 Latest Release (v0.3.11)
 
 - Fixed startup fallback for environments without FTS5 support
 - Ensured `schema.sql`, `sql-wasm.wasm`, and bundled DB are packaged correctly
 - Switched the MCP runtime entrypoint to `dist/mcp/index.mjs`
 - Added contract tests to prevent `.js`/`.mjs` drift across package, extension, and VS Code configs
+- Moved local VSIX packaging into `artifacts/vsix/` and prune old archives automatically
 
 ### Links
 
-- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.10
-- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.9...v0.3.10
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.11
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.10...v0.3.11
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
 
 ## ✨ Features
@@ -327,7 +328,7 @@ npm run build
 # Test with MCP Inspector
 npm run inspect
 
-# Package for distribution
+# Package for distribution (writes to artifacts/vsix/)
 npm run package
 ```
 

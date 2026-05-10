@@ -14,6 +14,7 @@ DASHBOARD.md
 output_sessions/**
 scripts/**
 exports/**
+artifacts/**
 *.vsix
 *.db
 /.tmp*
@@ -23,7 +24,7 @@ eslint.config.*
 # Exclude .github folder from package
 .github/
 
-# Exclude node_modules entirely (sql.js is bundled into dist/mcp/index.js)
+# Exclude node_modules entirely (sql.js is bundled into dist/mcp/index.mjs)
 node_modules/**
 
 # Ensure bundled resources are included

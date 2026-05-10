@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.11] - 2026-05-11
+
+### Changed
+
+- 📦 **Local VSIX archive location**: `npm run package` が `artifacts/vsix/` へ出力するよう変更
+- 🧹 **Archive retention**: 既存の repo root VSIX を `artifacts/vsix/` に移し、古いローカル VSIX を自動 prune
+- 📚 **Workspace hygiene sync**: README と build script の package 出力説明を `artifacts/vsix/` 前提に更新
+
 ## [0.3.10] - 2026-05-11
 
 ### Added
