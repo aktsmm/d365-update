@@ -210,6 +210,59 @@ Copilot Chat でこのように聞いてください:
 | リポジトリ                                                                        | 製品             | 備考                    |
 | --------------------------------------------------------------------------------- | ---------------- | ----------------------- |
 | [DynamicsAX2012-technet](https://github.com/MicrosoftDocs/DynamicsAX2012-technet) | Dynamics AX 2012 | TechNet ドキュメント    |
+
+---
+
+## 🐛 トラブルシューティング
+
+### 問題: 「Failed to initialize database」または「no such module: fts5」
+
+**原因**: SQLite FTS5 拡張機能がお使いの環境で利用不可
+
+**解決方法**: 拡張機能は自動的に FTS5 なしの標準検索にフォールバックします。検索機能は動作しますが、若干遅くなる可能性があります。特別な対応は不要です。
+
+- ✅ 拡張機能が自動検出して対応
+- ✅ ローカル全文検索は引き続き動作
+- ✅ すべての機能が利用可能
+
+### 問題: 「Cannot find module ... dist/mcp/index.js」エラー（アップデート後またはプロファイル変更時）
+
+**原因**: ユーザー設定に絶対パス（例: `c:\Users\<旧ユーザー名>\...\d365-update\dist\mcp\index.js`）が保存されており、以下の場合に無効になります：
+- Windows ユーザー名が変更された場合
+- ユーザーホームディレクトリが移動した場合
+- プロファイルが再作成された場合
+
+**解決方法**: `${extensionPath}` 変数を使った**相対パス**に変更してください：
+
+```json
+// ❌ 使わないでください（絶対パス）
+"d365-update": {
+  "command": "node",
+  "args": ["c:\\Users\\admin\\...\\d365-update-0.3.7\\dist\\mcp\\index.js"]
+}
+
+// ✅ 推奨（相対パス）
+"d365-update": {
+  "command": "node",
+  "args": ["${extensionPath}/dist/mcp/index.js"]
+}
+```
+
+この拡張機能を VS Code 設定に手動で追加した場合は、相対パス形式に変更してください。
+
+### 問題: Node.js 起動時に警告が表示される
+
+**例**: `[MODULE_TYPELESS_PACKAGE_JSON] Warning`
+
+**原因**: Node.js v20 以降では明示的なモジュールタイプ宣言が必要
+
+**解決方法**: これは v0.3.6+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
+
+---
+
+## 📝 ライセンス
+
+[CC BY-NC-SA 4.0](LICENSE) でライセンスされています
 | [DynamicsAX2012-msdn](https://github.com/MicrosoftDocs/DynamicsAX2012-msdn)       | Dynamics AX 2012 | MSDN/開発者ドキュメント |
 | [nav-content](https://github.com/MicrosoftDocs/nav-content)                       | Dynamics NAV     | Business Central に移行 |
 | [msftdynamicsgpdocs](https://github.com/MicrosoftDocs/msftdynamicsgpdocs)         | Dynamics GP      | Great Plains            |

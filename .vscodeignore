@@ -6,13 +6,16 @@ src/**
 tsconfig.json
 tsconfig.mcp.json
 **/*.map
+*.test.ts
+*.test.js
 
 # Exclude .github folder from package
 .github/
 
-# Exclude node_modules except better-sqlite3
+# Exclude node_modules entirely (sql.js is bundled into dist/mcp/index.js)
 node_modules/**
-!node_modules/better-sqlite3/**
-!node_modules/bindings/**
-!node_modules/file-uri-to-path/**
-!node_modules/prebuild-install/**
+!dist/**
+
+# Ensure bundled resources are included
+!dist/mcp/database/schema.sql
+!dist/mcp/sql-wasm.wasm

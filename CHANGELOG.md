@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.6] - 2026-05-11
+
+### Fixed
+
+- 🐛 **FTS5 非対応環境での起動失敗**: スキーマ適用時に FTS5 エラーをキャッチし、自動的にフォールバック検索へ切り替え
+  - 標準検索は引き続き動作（若干遅い可能性）
+  - ユーザー操作不要
+- 🐛 **schema.sql 配布物漏れ対策**: `.vscodeignore` を最適化
+  - `dist/mcp/database/schema.sql` を明示的に同梱保証
+  - `dist/mcp/sql-wasm.wasm` も同梱確保
+- 🐛 **m365-update 絶対パス設定エラー対応**: README / README_ja に相対パス推奨を明記
+  - トラブルシューティングセクションを追加
+  - `${extensionPath}` 変数使用を推奨
+
+### Changed
+
+- 📦 **package.json に `type` フィールドを追加**: `"type": "commonjs"` を明示
+  - Node.js v22 の `MODULE_TYPELESS_PACKAGE_JSON` 警告を解消
+  - パッケージの module type が明確化
+- 📚 **ドキュメント充実**: 2 言語（英語・日本語）にトラブルシューティングセクション追加
+
 ## [0.3.5] - 2026-02-28
 
 ### Changed

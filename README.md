@@ -210,6 +210,59 @@ Syncs from **16 MicrosoftDocs repositories**:
 | Repository                                                                        | Products         | Note                         |
 | --------------------------------------------------------------------------------- | ---------------- | ---------------------------- |
 | [DynamicsAX2012-technet](https://github.com/MicrosoftDocs/DynamicsAX2012-technet) | Dynamics AX 2012 | TechNet docs                 |
+
+---
+
+## 🐛 Troubleshooting
+
+### Issue: "Failed to initialize database" or "no such module: fts5"
+
+**Cause**: SQLite FTS5 extension is not available in your environment
+
+**Solution**: The extension automatically falls back to standard search without FTS5. Your searches will work but may be slightly slower. No action is required.
+
+- ✅ Extension will auto-detect and adapt
+- ✅ Local full-text search still works
+- ✅ All features remain functional
+
+### Issue: "Cannot find module ... dist/mcp/index.js" after update or profile change
+
+**Cause**: User settings contain an absolute path (e.g., `c:\Users\<old-username>\...\d365-update\dist\mcp\index.js`) that becomes invalid when:
+- Windows username changes
+- User home directory moves
+- Profile is recreated
+
+**Solution**: Use the **relative path** with `${extensionPath}` variable instead:
+
+```json
+// ❌ DO NOT USE (absolute path)
+"d365-update": {
+  "command": "node",
+  "args": ["c:\\Users\\admin\\...\\d365-update-0.3.7\\dist\\mcp\\index.js"]
+}
+
+// ✅ RECOMMENDED (relative path)
+"d365-update": {
+  "command": "node",
+  "args": ["${extensionPath}/dist/mcp/index.js"]
+}
+```
+
+If you've manually added this extension to VS Code settings, update it using the relative path format.
+
+### Issue: Node.js warnings during startup
+
+**Example**: `[MODULE_TYPELESS_PACKAGE_JSON] Warning`
+
+**Cause**: Node.js v20+ requires explicit module type declaration
+
+**Solution**: This is fixed in v0.3.6+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
+
+---
+
+## 📝 License
+
+Licensed under [CC BY-NC-SA 4.0](LICENSE)
 | [DynamicsAX2012-msdn](https://github.com/MicrosoftDocs/DynamicsAX2012-msdn)       | Dynamics AX 2012 | MSDN/Developer docs          |
 | [nav-content](https://github.com/MicrosoftDocs/nav-content)                       | Dynamics NAV     | Migrated to Business Central |
 | [msftdynamicsgpdocs](https://github.com/MicrosoftDocs/msftdynamicsgpdocs)         | Dynamics GP      | Great Plains                 |
