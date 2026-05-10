@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.10] - 2026-05-11
+
+### Added
+
+- 🧪 **MCP entrypoint contract test expansion**: `.mjs` 参照が `package.json` だけでなく `src/extension.ts`、`.vscode/launch.json`、`.vscode/tasks.json` でも揃っていることを検証
+
+### Changed
+
+- 🚀 **Patch release**: ESM/CJS 不一致の再発防止ガードをリリースへ反映
+
 ## [0.3.9] - 2026-05-11
 
 ### Fixed

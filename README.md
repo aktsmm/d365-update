@@ -23,17 +23,17 @@
 
 ---
 
-## 🆕 Latest Release (v0.3.8)
+## 🆕 Latest Release (v0.3.10)
 
 - Fixed startup fallback for environments without FTS5 support
 - Ensured `schema.sql`, `sql-wasm.wasm`, and bundled DB are packaged correctly
-- Cleaned the build output before packaging to prevent stale dist artifacts from shipping
-- Restored the lint pipeline and added troubleshooting guidance for path configuration and Node module warnings
+- Switched the MCP runtime entrypoint to `dist/mcp/index.mjs`
+- Added contract tests to prevent `.js`/`.mjs` drift across package, extension, and VS Code configs
 
 ### Links
 
-- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.8
-- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.7...v0.3.8
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.10
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.9...v0.3.10
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
 
 ## ✨ Features
@@ -266,7 +266,7 @@ If you've manually added this extension to VS Code settings, update it using the
 
 **Cause**: Node.js v20+ requires explicit module type declaration
 
-**Solution**: This is fixed in v0.3.9+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
+**Solution**: This is fixed in v0.3.10+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
 
 ---
 

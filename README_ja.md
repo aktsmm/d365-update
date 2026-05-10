@@ -23,17 +23,17 @@
 
 ---
 
-## 🆕 最新リリース（v0.3.8）
+## 🆕 最新リリース（v0.3.10）
 
 - FTS5 非対応環境での起動フォールバックを修正
 - `schema.sql`、`sql-wasm.wasm`、同梱 DB の配布漏れを防止
-- 配布前に dist を掃除し、古いビルド残骸が VSIX に混ざらないよう修正
-- lint パイプライン復旧と、パス設定・Node 警告のトラブルシュートを追加
+- MCP 実行エントリを `dist/mcp/index.mjs` に統一
+- `package.json` / 拡張コード / VS Code 設定の `.mjs` 契約テストを追加
 
 ### リンク
 
-- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.8
-- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.7...v0.3.8
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.10
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.9...v0.3.10
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
 
 ## ✨ 特徴
@@ -266,7 +266,7 @@ Copilot Chat でこのように聞いてください:
 
 **原因**: Node.js v20 以降では明示的なモジュールタイプ宣言が必要
 
-**解決方法**: これは v0.3.9+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
+**解決方法**: これは v0.3.10+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
 
 ---
 
