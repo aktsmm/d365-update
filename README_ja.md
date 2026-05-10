@@ -23,17 +23,17 @@
 
 ---
 
-## 🆕 最新リリース（v0.3.5）
+## 🆕 最新リリース（v0.3.7）
 
-- ダッシュボードのワークフローステータス表示を更新
-- MCP 同期処理の永続化とフォールバック挙動を強化
-- DB レイヤーを sql.js ベースへ移行し、ネイティブ依存を軽減
-- LICENSE と運用ドキュメントを更新
+- FTS5 非対応環境での起動フォールバックを修正
+- `schema.sql`、`sql-wasm.wasm`、同梱 DB の配布漏れを防止
+- VSIX から開発用ファイルを除外
+- パス設定と Node 警告に関するトラブルシュートを追加
 
 ### リンク
 
-- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.5
-- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.4...v0.3.5
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.7
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.6...v0.3.7
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
 
 ## ✨ 特徴
@@ -210,6 +210,9 @@ Copilot Chat でこのように聞いてください:
 | リポジトリ                                                                        | 製品             | 備考                    |
 | --------------------------------------------------------------------------------- | ---------------- | ----------------------- |
 | [DynamicsAX2012-technet](https://github.com/MicrosoftDocs/DynamicsAX2012-technet) | Dynamics AX 2012 | TechNet ドキュメント    |
+| [DynamicsAX2012-msdn](https://github.com/MicrosoftDocs/DynamicsAX2012-msdn)       | Dynamics AX 2012 | MSDN/開発者ドキュメント |
+| [nav-content](https://github.com/MicrosoftDocs/nav-content)                       | Dynamics NAV     | Business Central に移行 |
+| [msftdynamicsgpdocs](https://github.com/MicrosoftDocs/msftdynamicsgpdocs)         | Dynamics GP      | Great Plains            |
 
 ---
 
@@ -228,6 +231,7 @@ Copilot Chat でこのように聞いてください:
 ### 問題: 「Cannot find module ... dist/mcp/index.js」エラー（アップデート後またはプロファイル変更時）
 
 **原因**: ユーザー設定に絶対パス（例: `c:\Users\<旧ユーザー名>\...\d365-update\dist\mcp\index.js`）が保存されており、以下の場合に無効になります：
+
 - Windows ユーザー名が変更された場合
 - ユーザーホームディレクトリが移動した場合
 - プロファイルが再作成された場合
@@ -256,16 +260,13 @@ Copilot Chat でこのように聞いてください:
 
 **原因**: Node.js v20 以降では明示的なモジュールタイプ宣言が必要
 
-**解決方法**: これは v0.3.6+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
+**解決方法**: これは v0.3.7+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
 
 ---
 
 ## 📝 ライセンス
 
 [CC BY-NC-SA 4.0](LICENSE) でライセンスされています
-| [DynamicsAX2012-msdn](https://github.com/MicrosoftDocs/DynamicsAX2012-msdn)       | Dynamics AX 2012 | MSDN/開発者ドキュメント |
-| [nav-content](https://github.com/MicrosoftDocs/nav-content)                       | Dynamics NAV     | Business Central に移行 |
-| [msftdynamicsgpdocs](https://github.com/MicrosoftDocs/msftdynamicsgpdocs)         | Dynamics GP      | Great Plains            |
 
 ## 📦 対応製品
 

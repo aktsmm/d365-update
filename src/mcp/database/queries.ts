@@ -8,23 +8,6 @@ import type { Database as SqlJsDatabase } from "sql.js";
 import type { D365Update, D365Commit, SearchFilters } from "../types.js";
 
 /**
- * sql.js の結果を型付きオブジェクトに変換するヘルパー
- */
-function resultToObjects<T>(result: {
-  columns: string[];
-  values: unknown[][];
-}): T[] {
-  const { columns, values } = result;
-  return values.map((row) => {
-    const obj: Record<string, unknown> = {};
-    columns.forEach((col, i) => {
-      obj[col] = row[i];
-    });
-    return obj as T;
-  });
-}
-
-/**
  * 同期チェックポイントを取得
  */
 export function getSyncCheckpoint(db: SqlJsDatabase): {

@@ -23,17 +23,17 @@
 
 ---
 
-## 🆕 Latest Release (v0.3.5)
+## 🆕 Latest Release (v0.3.7)
 
-- Updated workflow status display on the dashboard
-- Hardened MCP sync persistence and fallback behavior
-- Migrated DB layer to sql.js to reduce native module dependency
-- Updated LICENSE and operational documentation
+- Fixed startup fallback for environments without FTS5 support
+- Ensured `schema.sql`, `sql-wasm.wasm`, and bundled DB are packaged correctly
+- Removed development-only files from the VSIX payload
+- Added troubleshooting guidance for path configuration and Node module warnings
 
 ### Links
 
-- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.5
-- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.4...v0.3.5
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.7
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.6...v0.3.7
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
 
 ## ✨ Features
@@ -210,6 +210,9 @@ Syncs from **16 MicrosoftDocs repositories**:
 | Repository                                                                        | Products         | Note                         |
 | --------------------------------------------------------------------------------- | ---------------- | ---------------------------- |
 | [DynamicsAX2012-technet](https://github.com/MicrosoftDocs/DynamicsAX2012-technet) | Dynamics AX 2012 | TechNet docs                 |
+| [DynamicsAX2012-msdn](https://github.com/MicrosoftDocs/DynamicsAX2012-msdn)       | Dynamics AX 2012 | MSDN/Developer docs          |
+| [nav-content](https://github.com/MicrosoftDocs/nav-content)                       | Dynamics NAV     | Migrated to Business Central |
+| [msftdynamicsgpdocs](https://github.com/MicrosoftDocs/msftdynamicsgpdocs)         | Dynamics GP      | Great Plains                 |
 
 ---
 
@@ -228,6 +231,7 @@ Syncs from **16 MicrosoftDocs repositories**:
 ### Issue: "Cannot find module ... dist/mcp/index.js" after update or profile change
 
 **Cause**: User settings contain an absolute path (e.g., `c:\Users\<old-username>\...\d365-update\dist\mcp\index.js`) that becomes invalid when:
+
 - Windows username changes
 - User home directory moves
 - Profile is recreated
@@ -256,16 +260,13 @@ If you've manually added this extension to VS Code settings, update it using the
 
 **Cause**: Node.js v20+ requires explicit module type declaration
 
-**Solution**: This is fixed in v0.3.6+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
+**Solution**: This is fixed in v0.3.7+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
 
 ---
 
 ## 📝 License
 
 Licensed under [CC BY-NC-SA 4.0](LICENSE)
-| [DynamicsAX2012-msdn](https://github.com/MicrosoftDocs/DynamicsAX2012-msdn)       | Dynamics AX 2012 | MSDN/Developer docs          |
-| [nav-content](https://github.com/MicrosoftDocs/nav-content)                       | Dynamics NAV     | Migrated to Business Central |
-| [msftdynamicsgpdocs](https://github.com/MicrosoftDocs/msftdynamicsgpdocs)         | Dynamics GP      | Great Plains                 |
 
 ## 📦 Supported Products
 

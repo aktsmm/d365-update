@@ -8,6 +8,16 @@ tsconfig.mcp.json
 **/*.map
 *.test.ts
 *.test.js
+AGENTS.md
+DASHBOARD.md
+output_sessions/**
+scripts/**
+exports/**
+*.vsix
+*.db
+/.tmp*
+/eslint.config.cjs
+eslint.config.*
 
 # Exclude .github folder from package
 .github/
@@ -19,3 +29,4 @@ node_modules/**
 # Ensure bundled resources are included
 !dist/mcp/database/schema.sql
 !dist/mcp/sql-wasm.wasm
+!dist/mcp/bundled.db

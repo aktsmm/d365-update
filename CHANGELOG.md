@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.7] - 2026-05-11
+
+### Fixed
+
+- 📦 **VSIX payload hygiene**: 開発用ファイルが配布物に混入する問題を修正
+  - `AGENTS.md`, `DASHBOARD.md`, `output_sessions/`, `scripts/`, `exports/`, `*.vsix`, `*.db` を配布対象から除外
+  - `dist/mcp/bundled.db`, `dist/mcp/database/schema.sql`, `dist/mcp/sql-wasm.wasm` は明示的に保持
+- 📝 **README / README_ja の整合性修正**: レガシー製品表がライセンス節へ紛れ込んでいた崩れを修正
+
+### Changed
+
+- 🚀 **Release version bump**: payload hygiene 修正を含む再リリースのため `0.3.7` へ更新
+- ✅ **Lint pipeline restored**: ESLint / TypeScript ESLint を導入し、`npm run lint` が再び利用可能に
+
 ## [0.3.6] - 2026-05-11
 
 ### Fixed

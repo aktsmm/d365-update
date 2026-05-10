@@ -126,7 +126,7 @@ export async function executeSearchD365Updates(
   // 結果をフォーマット
   const formattedResults = results.map((update) => {
     // 概要を抽出（最初の段落またはキーポイント）
-    let summary = "";
+    let summary: string;
     if (update.description) {
       // 箇条書きや機能説明を優先的に抽出
       const lines = update.description
