@@ -23,17 +23,17 @@
 
 ---
 
-## 🆕 最新リリース（v0.3.7）
+## 🆕 最新リリース（v0.3.8）
 
 - FTS5 非対応環境での起動フォールバックを修正
 - `schema.sql`、`sql-wasm.wasm`、同梱 DB の配布漏れを防止
-- VSIX から開発用ファイルを除外
-- パス設定と Node 警告に関するトラブルシュートを追加
+- 配布前に dist を掃除し、古いビルド残骸が VSIX に混ざらないよう修正
+- lint パイプライン復旧と、パス設定・Node 警告のトラブルシュートを追加
 
 ### リンク
 
-- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.7
-- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.6...v0.3.7
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.8
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.7...v0.3.8
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
 
 ## ✨ 特徴
@@ -260,7 +260,7 @@ Copilot Chat でこのように聞いてください:
 
 **原因**: Node.js v20 以降では明示的なモジュールタイプ宣言が必要
 
-**解決方法**: これは v0.3.7+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
+**解決方法**: これは v0.3.8+ で修正されています。VS Code Marketplace 経由でアップグレードして、最新ビルドを利用してください。
 
 ---
 
@@ -328,7 +328,7 @@ npm run package
 ## 📝 技術スタック
 
 - **MCP SDK**: `@modelcontextprotocol/sdk`
-- **データベース**: SQLite (`better-sqlite3`) + FTS5
+- **データベース**: `sql.js`（WebAssembly）ベースの SQLite、FTS5 非対応時はフォールバック
 - **データソース**: GitHub API (MicrosoftDocs リポジトリ)
 - **VS Code API**: 拡張機能連携
 

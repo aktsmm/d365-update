@@ -23,17 +23,17 @@
 
 ---
 
-## 🆕 Latest Release (v0.3.7)
+## 🆕 Latest Release (v0.3.8)
 
 - Fixed startup fallback for environments without FTS5 support
 - Ensured `schema.sql`, `sql-wasm.wasm`, and bundled DB are packaged correctly
-- Removed development-only files from the VSIX payload
-- Added troubleshooting guidance for path configuration and Node module warnings
+- Cleaned the build output before packaging to prevent stale dist artifacts from shipping
+- Restored the lint pipeline and added troubleshooting guidance for path configuration and Node module warnings
 
 ### Links
 
-- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.7
-- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.6...v0.3.7
+- Release: https://github.com/aktsmm/d365-update/releases/tag/v0.3.8
+- Compare: https://github.com/aktsmm/d365-update/compare/v0.3.7...v0.3.8
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update
 
 ## ✨ Features
@@ -260,7 +260,7 @@ If you've manually added this extension to VS Code settings, update it using the
 
 **Cause**: Node.js v20+ requires explicit module type declaration
 
-**Solution**: This is fixed in v0.3.7+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
+**Solution**: This is fixed in v0.3.8+. Upgrade via VS Code Marketplace for the latest build with proper module declarations.
 
 ---
 
@@ -328,7 +328,7 @@ npm run package
 ## 📝 Tech Stack
 
 - **MCP SDK**: `@modelcontextprotocol/sdk`
-- **Database**: SQLite (`better-sqlite3`) + FTS5
+- **Database**: SQLite via `sql.js` (WebAssembly) with FTS5 fallback
 - **Data Source**: GitHub API (MicrosoftDocs repositories)
 - **VS Code API**: Extension integration
 

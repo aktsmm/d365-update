@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.8] - 2026-05-11
+
+### Fixed
+
+- 📦 **Stale dist artifact leakage**: build 前に `dist/` を削除し、旧 JS / d.ts / test 出力が VSIX に残らないよう修正
+- 🧹 **VSIX payload hygiene tightening**: `dist/**/*.d.ts` と不要な root 開発ファイルを除外
+- 🗃️ **Bundled DB packaging order**: prepublish 後に同梱 DB を再生成し、`dist/mcp/bundled.db` が VSIX から消えないよう修正
+- 📚 **README accuracy**: Tech Stack の DB 記述を `sql.js` ベースへ修正し、最新リリース表記を `0.3.8` へ同期
+
+### Changed
+
+- 🚀 **Release version bump**: 配布物クリーンアップを反映するため `0.3.8` へ更新
+
 ## [0.3.7] - 2026-05-11
 
 ### Fixed

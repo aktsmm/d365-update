@@ -6,6 +6,7 @@ src/**
 tsconfig.json
 tsconfig.mcp.json
 **/*.map
+dist/**/*.d.ts
 *.test.ts
 *.test.js
 AGENTS.md
@@ -24,7 +25,6 @@ eslint.config.*
 
 # Exclude node_modules entirely (sql.js is bundled into dist/mcp/index.js)
 node_modules/**
-!dist/**
 
 # Ensure bundled resources are included
 !dist/mcp/database/schema.sql
