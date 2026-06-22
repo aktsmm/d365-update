@@ -5,6 +5,7 @@
 [![Installs](https://badgen.net/vs-marketplace/i/yamapan.d365-update)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
 [![License](https://badgen.net/badge/License/CC%20BY-NC-SA%204.0/gray)](LICENSE)
 [![GitHub](https://badgen.net/badge/GitHub/Source/black)](https://github.com/aktsmm/d365-update)
+[![Stars](https://badgen.net/github/stars/aktsmm/d365-update)](https://github.com/aktsmm/d365-update)
 
 > ⚠️ **Beta Version**: This extension is currently in beta. Features and APIs may change. Feedback and bug reports are welcome!
 
