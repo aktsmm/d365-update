@@ -1,20 +1,15 @@
 # D365 UPDATE MCP
 
-[![Beta](https://img.shields.io/badge/Status-Beta-orange?style=flat-square)]()
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/yamapan.d365-update?style=flat-square&label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/yamapan.d365-update?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg?style=flat-square)](LICENSE)
+[![Status](https://badgen.net/badge/Status/Beta/orange)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
+[![VS Marketplace](https://badgen.net/vs-marketplace/v/yamapan.d365-update)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
+[![Installs](https://badgen.net/vs-marketplace/i/yamapan.d365-update)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
+[![License](https://badgen.net/badge/License/CC%20BY-NC-SA%204.0/gray)](LICENSE)
+[![GitHub](https://badgen.net/badge/GitHub/Source/black)](https://github.com/aktsmm/d365-update)
 
 > ⚠️ **Beta Version**: This extension is currently in beta. Features and APIs may change. Feedback and bug reports are welcome!
 
 <p align="center">
   <strong>Search and retrieve Dynamics 365 update information from GitHub Docs via Copilot Chat</strong>
-</p>
-
-<p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update">
-    <img src="https://img.shields.io/badge/Install-VS%20Code%20Marketplace-007ACC?style=for-the-badge&logo=visual-studio-code" alt="Install from VS Code Marketplace">
-  </a>
 </p>
 
 <p align="center">

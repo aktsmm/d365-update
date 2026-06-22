@@ -1,20 +1,15 @@
 # D365 UPDATE MCP
 
-[![Beta](https://img.shields.io/badge/Status-Beta-orange?style=flat-square)]()
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/yamapan.d365-update?style=flat-square&label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/yamapan.d365-update?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg?style=flat-square)](LICENSE)
+[![Status](https://badgen.net/badge/Status/Beta/orange)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
+[![VS Marketplace](https://badgen.net/vs-marketplace/v/yamapan.d365-update)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
+[![Installs](https://badgen.net/vs-marketplace/i/yamapan.d365-update)](https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update)
+[![License](https://badgen.net/badge/License/CC%20BY-NC-SA%204.0/gray)](LICENSE)
+[![GitHub](https://badgen.net/badge/GitHub/Source/black)](https://github.com/aktsmm/d365-update)
 
 > ⚠️ **ベータ版**: この拡張機能は現在ベータ版です。機能や API は変更される可能性があります。フィードバックやバグ報告を歓迎します！
 
 <p align="center">
   <strong>Copilot Chat から Dynamics 365 のアップデート情報を検索</strong>
-</p>
-
-<p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=yamapan.d365-update">
-    <img src="https://img.shields.io/badge/インストール-VS%20Code%20Marketplace-007ACC?style=for-the-badge&logo=visual-studio-code" alt="VS Code Marketplace からインストール">
-  </a>
 </p>
 
 <p align="center">
